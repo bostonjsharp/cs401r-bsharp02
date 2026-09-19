@@ -68,6 +68,10 @@ resource "aws_iam_policy" "ml_engineer" {
           "sagemaker:UpdateSpace", "sagemaker:DeleteSpace",
           "sagemaker:DescribeApp", "sagemaker:ListApps", "sagemaker:CreateApp", "sagemaker:DeleteApp",
           "sagemaker:CreatePresignedDomainUrl",
+          # The Studio UI tags every space it creates; without these, "Create
+          # JupyterLab space" fails with AccessDenied on sagemaker:AddTags.
+          # Not in the handout policy (masked there by AmazonSageMakerFullAccess).
+          "sagemaker:AddTags", "sagemaker:ListTags", "sagemaker:DeleteTags",
         ]
         Resource = [
           "arn:aws:sagemaker:*:*:domain/*", "arn:aws:sagemaker:*:*:user-profile/*",

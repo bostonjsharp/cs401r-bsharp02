@@ -47,6 +47,12 @@ resource "aws_sagemaker_domain" "this" {
     home_efs_file_system = "Delete"
   }
 
+  # AWS returns an empty studio_web_portal_settings block on every Domain and
+  # the provider tries to remove it on each plan. Ignoring it keeps plan clean.
+  lifecycle {
+    ignore_changes = [default_user_settings[0].studio_web_portal_settings]
+  }
+
   tags = {
     Name = "${local.name_prefix}-domain"
   }

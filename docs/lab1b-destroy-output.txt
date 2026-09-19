@@ -1,0 +1,680 @@
+
+Warning: Deprecated Parameter
+
+The parameter "dynamodb_table" is deprecated. Use parameter "use_lockfile"
+instead.
+module.storage.data.aws_caller_identity.current: Reading...
+module.iam.aws_iam_role.ml_engineer: Refreshing state... [id=northstar-dev-MLEngineer]
+module.vpc.aws_vpc.this: Refreshing state... [id=vpc-0e01694bbaaab9f57]
+module.iam.aws_iam_policy.ml_engineer: Refreshing state... [id=arn:aws:iam::829485866627:policy/northstar-dev-MLEngineerPolicy]
+module.storage.data.aws_caller_identity.current: Read complete after 0s [id=829485866627]
+module.storage.aws_s3_bucket.data: Refreshing state... [id=northstar-dev-data-829485866627]
+module.iam.aws_iam_role_policy_attachment.ml_engineer: Refreshing state... [id=northstar-dev-MLEngineer-20260919052710160100000001]
+module.storage.aws_s3_bucket_public_access_block.data: Refreshing state... [id=northstar-dev-data-829485866627]
+module.storage.aws_s3_bucket_versioning.data: Refreshing state... [id=northstar-dev-data-829485866627]
+module.storage.aws_s3_bucket_server_side_encryption_configuration.data: Refreshing state... [id=northstar-dev-data-829485866627]
+module.vpc.aws_internet_gateway.this: Refreshing state... [id=igw-06865d267241e2395]
+module.vpc.aws_subnet.public: Refreshing state... [id=subnet-0a2a06c9cb5402189]
+module.vpc.aws_security_group.this: Refreshing state... [id=sg-0dbda690a1320a5ad]
+module.vpc.aws_route_table.public: Refreshing state... [id=rtb-08d16fe3190accb8d]
+module.vpc.aws_route_table_association.public: Refreshing state... [id=rtbassoc-0fc66bfc9b73fe032]
+module.sagemaker.aws_sagemaker_domain.this: Refreshing state... [id=d-lapbrmvpwgri]
+module.sagemaker.aws_sagemaker_user_profile.ml_engineer: Refreshing state... [id=arn:aws:sagemaker:us-east-1:829485866627:user-profile/d-lapbrmvpwgri/MLEngineer]
+module.storage.aws_s3_object.prefix["artifacts/"]: Refreshing state... [id=artifacts/]
+module.storage.aws_s3_object.prefix["raw/"]: Refreshing state... [id=raw/]
+module.storage.aws_s3_object.prefix["processed/"]: Refreshing state... [id=processed/]
+module.storage.aws_s3_object.prefix["features/"]: Refreshing state... [id=features/]
+
+Terraform used the selected providers to generate the following execution
+plan. Resource actions are indicated with the following symbols:
+  - destroy
+
+Terraform will perform the following actions:
+
+  # module.iam.aws_iam_policy.ml_engineer will be destroyed
+  - resource "aws_iam_policy" "ml_engineer" {
+      - arn              = "arn:aws:iam::829485866627:policy/northstar-dev-MLEngineerPolicy" -> null
+      - attachment_count = 1 -> null
+      - description      = "Least-privilege permissions for the MLEngineer role: SageMaker jobs, Studio self-service, artifacts/ and features/ prefixes, logs, ECR pull" -> null
+      - id               = "arn:aws:iam::829485866627:policy/northstar-dev-MLEngineerPolicy" -> null
+      - name             = "northstar-dev-MLEngineerPolicy" -> null
+      - path             = "/" -> null
+      - policy           = jsonencode(
+            {
+              - Statement = [
+                  - {
+                      - Action   = [
+                          - "sagemaker:CreateTrainingJob",
+                          - "sagemaker:DescribeTrainingJob",
+                          - "sagemaker:StopTrainingJob",
+                          - "sagemaker:CreateEndpoint",
+                          - "sagemaker:DescribeEndpoint",
+                          - "sagemaker:DeleteEndpoint",
+                          - "sagemaker:CreateEndpointConfig",
+                          - "sagemaker:DeleteEndpointConfig",
+                          - "sagemaker:CreateMlflowApp",
+                          - "sagemaker:DescribeMlflowApp",
+                          - "sagemaker:ListMlflowApps",
+                          - "sagemaker:CreatePresignedMlflowAppUrl",
+                          - "sagemaker:RegisterModel",
+                          - "sagemaker:DescribeModelPackage",
+                          - "sagemaker:ListModelPackages",
+                        ]
+                      - Effect   = "Allow"
+                      - Resource = "*"
+                      - Sid      = "SageMakerCore"
+                    },
+                  - {
+                      - Action   = [
+                          - "sagemaker:DescribeDomain",
+                          - "sagemaker:ListDomains",
+                          - "sagemaker:DescribeUserProfile",
+                          - "sagemaker:ListUserProfiles",
+                          - "sagemaker:DescribeSpace",
+                          - "sagemaker:ListSpaces",
+                          - "sagemaker:CreateSpace",
+                          - "sagemaker:UpdateSpace",
+                          - "sagemaker:DeleteSpace",
+                          - "sagemaker:DescribeApp",
+                          - "sagemaker:ListApps",
+                          - "sagemaker:CreateApp",
+                          - "sagemaker:DeleteApp",
+                          - "sagemaker:CreatePresignedDomainUrl",
+                          - "sagemaker:AddTags",
+                          - "sagemaker:ListTags",
+                          - "sagemaker:DeleteTags",
+                        ]
+                      - Effect   = "Allow"
+                      - Resource = [
+                          - "arn:aws:sagemaker:*:*:domain/*",
+                          - "arn:aws:sagemaker:*:*:user-profile/*",
+                          - "arn:aws:sagemaker:*:*:space/*",
+                          - "arn:aws:sagemaker:*:*:app/*",
+                        ]
+                      - Sid      = "StudioSelfService"
+                    },
+                  - {
+                      - Action   = [
+                          - "s3:GetObject",
+                          - "s3:PutObject",
+                          - "s3:DeleteObject",
+                        ]
+                      - Effect   = "Allow"
+                      - Resource = [
+                          - "arn:aws:s3:::northstar-dev-data-*/artifacts/*",
+                          - "arn:aws:s3:::northstar-dev-data-*/features/*",
+                        ]
+                      - Sid      = "S3ArtifactsAndFeatures"
+                    },
+                  - {
+                      - Action   = [
+                          - "s3:ListBucket",
+                          - "s3:GetBucketLocation",
+                        ]
+                      - Effect   = "Allow"
+                      - Resource = "arn:aws:s3:::northstar-dev-data-*"
+                      - Sid      = "S3BucketList"
+                    },
+                  - {
+                      - Action   = [
+                          - "logs:CreateLogGroup",
+                          - "logs:CreateLogStream",
+                          - "logs:PutLogEvents",
+                        ]
+                      - Effect   = "Allow"
+                      - Resource = "arn:aws:logs:*:*:log-group:/aws/sagemaker/*"
+                      - Sid      = "CloudWatchLogs"
+                    },
+                  - {
+                      - Action   = [
+                          - "ecr:GetDownloadUrlForLayer",
+                          - "ecr:BatchGetImage",
+                          - "ecr:GetAuthorizationToken",
+                        ]
+                      - Effect   = "Allow"
+                      - Resource = "*"
+                      - Sid      = "ECRRead"
+                    },
+                ]
+              - Version   = "2012-10-17"
+            }
+        ) -> null
+      - policy_id        = "ANPA4CIJV32BVZU5LK6BI" -> null
+      - tags             = {
+          - "Name" = "northstar-dev-MLEngineerPolicy"
+        } -> null
+      - tags_all         = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "northstar-dev-MLEngineerPolicy"
+          - "Project"     = "northstar"
+        } -> null
+        # (1 unchanged attribute hidden)
+    }
+
+  # module.iam.aws_iam_role.ml_engineer will be destroyed
+  - resource "aws_iam_role" "ml_engineer" {
+      - arn                   = "arn:aws:iam::829485866627:role/northstar-dev-MLEngineer" -> null
+      - assume_role_policy    = jsonencode(
+            {
+              - Statement = [
+                  - {
+                      - Action    = "sts:AssumeRole"
+                      - Effect    = "Allow"
+                      - Principal = {
+                          - Service = "sagemaker.amazonaws.com"
+                        }
+                    },
+                ]
+              - Version   = "2012-10-17"
+            }
+        ) -> null
+      - create_date           = "2026-09-19T05:27:10Z" -> null
+      - description           = "Execution role for SageMaker Studio and training jobs (MLEngineer persona)" -> null
+      - force_detach_policies = false -> null
+      - id                    = "northstar-dev-MLEngineer" -> null
+      - managed_policy_arns   = [
+          - "arn:aws:iam::829485866627:policy/northstar-dev-MLEngineerPolicy",
+        ] -> null
+      - max_session_duration  = 3600 -> null
+      - name                  = "northstar-dev-MLEngineer" -> null
+      - path                  = "/" -> null
+      - tags                  = {
+          - "Name" = "northstar-dev-MLEngineer"
+        } -> null
+      - tags_all              = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "northstar-dev-MLEngineer"
+          - "Project"     = "northstar"
+        } -> null
+      - unique_id             = "AROA4CIJV32BUNRXP4R2K" -> null
+        # (2 unchanged attributes hidden)
+    }
+
+  # module.iam.aws_iam_role_policy_attachment.ml_engineer will be destroyed
+  - resource "aws_iam_role_policy_attachment" "ml_engineer" {
+      - id         = "northstar-dev-MLEngineer-20260919052710160100000001" -> null
+      - policy_arn = "arn:aws:iam::829485866627:policy/northstar-dev-MLEngineerPolicy" -> null
+      - role       = "northstar-dev-MLEngineer" -> null
+    }
+
+  # module.sagemaker.aws_sagemaker_domain.this will be destroyed
+  - resource "aws_sagemaker_domain" "this" {
+      - app_network_access_type                        = "PublicInternetOnly" -> null
+      - arn                                            = "arn:aws:sagemaker:us-east-1:829485866627:domain/d-lapbrmvpwgri" -> null
+      - auth_mode                                      = "IAM" -> null
+      - domain_name                                    = "northstar-dev-domain" -> null
+      - home_efs_file_system_id                        = "fs-0fe8ee3dc7587cd92" -> null
+      - id                                             = "d-lapbrmvpwgri" -> null
+      - subnet_ids                                     = [
+          - "subnet-0a2a06c9cb5402189",
+        ] -> null
+      - tag_propagation                                = "DISABLED" -> null
+      - tags                                           = {
+          - "Name" = "northstar-dev-domain"
+        } -> null
+      - tags_all                                       = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "northstar-dev-domain"
+          - "Project"     = "northstar"
+        } -> null
+      - url                                            = "https://d-lapbrmvpwgri.studio.us-east-1.sagemaker.aws" -> null
+      - vpc_id                                         = "vpc-0e01694bbaaab9f57" -> null
+        # (5 unchanged attributes hidden)
+
+      - default_user_settings {
+          - auto_mount_home_efs = "Enabled" -> null
+          - default_landing_uri = "studio::" -> null
+          - execution_role      = "arn:aws:iam::829485866627:role/northstar-dev-MLEngineer" -> null
+          - security_groups     = [
+              - "sg-0dbda690a1320a5ad",
+            ] -> null
+          - studio_web_portal   = "ENABLED" -> null
+
+          - jupyter_lab_app_settings {
+              - lifecycle_config_arns         = [] -> null
+                # (1 unchanged attribute hidden)
+
+              - default_resource_spec {
+                  - instance_type                 = "ml.t3.medium" -> null
+                    # (4 unchanged attributes hidden)
+                }
+            }
+
+          - sharing_settings {
+              - notebook_output_option = "Disabled" -> null
+                # (2 unchanged attributes hidden)
+            }
+
+          - studio_web_portal_settings {}
+        }
+
+      - retention_policy {
+          - home_efs_file_system = "Delete" -> null
+        }
+    }
+
+  # module.sagemaker.aws_sagemaker_user_profile.ml_engineer will be destroyed
+  - resource "aws_sagemaker_user_profile" "ml_engineer" {
+      - arn                            = "arn:aws:sagemaker:us-east-1:829485866627:user-profile/d-lapbrmvpwgri/MLEngineer" -> null
+      - domain_id                      = "d-lapbrmvpwgri" -> null
+      - home_efs_file_system_uid       = "200005" -> null
+      - id                             = "arn:aws:sagemaker:us-east-1:829485866627:user-profile/d-lapbrmvpwgri/MLEngineer" -> null
+      - tags                           = {
+          - "Name" = "northstar-dev-MLEngineer-profile"
+        } -> null
+      - tags_all                       = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "northstar-dev-MLEngineer-profile"
+          - "Project"     = "northstar"
+        } -> null
+      - user_profile_name              = "MLEngineer" -> null
+        # (2 unchanged attributes hidden)
+
+      - user_settings {
+          - auto_mount_home_efs = "DefaultAsDomain" -> null
+          - execution_role      = "arn:aws:iam::829485866627:role/northstar-dev-MLEngineer" -> null
+          - security_groups     = [
+              - "sg-0dbda690a1320a5ad",
+            ] -> null
+            # (2 unchanged attributes hidden)
+        }
+    }
+
+  # module.storage.aws_s3_bucket.data will be destroyed
+  - resource "aws_s3_bucket" "data" {
+      - arn                         = "arn:aws:s3:::northstar-dev-data-829485866627" -> null
+      - bucket                      = "northstar-dev-data-829485866627" -> null
+      - bucket_domain_name          = "northstar-dev-data-829485866627.s3.amazonaws.com" -> null
+      - bucket_regional_domain_name = "northstar-dev-data-829485866627.s3.us-east-1.amazonaws.com" -> null
+      - force_destroy               = true -> null
+      - hosted_zone_id              = "Z3AQBSTGFYJSTF" -> null
+      - id                          = "northstar-dev-data-829485866627" -> null
+      - object_lock_enabled         = false -> null
+      - region                      = "us-east-1" -> null
+      - request_payer               = "BucketOwner" -> null
+      - tags                        = {
+          - "Name" = "northstar-dev-data-829485866627"
+        } -> null
+      - tags_all                    = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "northstar-dev-data-829485866627"
+          - "Project"     = "northstar"
+        } -> null
+        # (3 unchanged attributes hidden)
+
+      - grant {
+          - id          = "11f4f10702f6973252ab88b5af713ccaf347d96bfaf22c9da7808ac78aaaa424" -> null
+          - permissions = [
+              - "FULL_CONTROL",
+            ] -> null
+          - type        = "CanonicalUser" -> null
+            # (1 unchanged attribute hidden)
+        }
+
+      - server_side_encryption_configuration {
+          - rule {
+              - bucket_key_enabled = false -> null
+
+              - apply_server_side_encryption_by_default {
+                  - sse_algorithm     = "AES256" -> null
+                    # (1 unchanged attribute hidden)
+                }
+            }
+        }
+
+      - versioning {
+          - enabled    = true -> null
+          - mfa_delete = false -> null
+        }
+    }
+
+  # module.storage.aws_s3_bucket_public_access_block.data will be destroyed
+  - resource "aws_s3_bucket_public_access_block" "data" {
+      - block_public_acls       = true -> null
+      - block_public_policy     = true -> null
+      - bucket                  = "northstar-dev-data-829485866627" -> null
+      - id                      = "northstar-dev-data-829485866627" -> null
+      - ignore_public_acls      = true -> null
+      - restrict_public_buckets = true -> null
+    }
+
+  # module.storage.aws_s3_bucket_server_side_encryption_configuration.data will be destroyed
+  - resource "aws_s3_bucket_server_side_encryption_configuration" "data" {
+      - bucket                = "northstar-dev-data-829485866627" -> null
+      - id                    = "northstar-dev-data-829485866627" -> null
+        # (1 unchanged attribute hidden)
+
+      - rule {
+          - bucket_key_enabled = false -> null
+
+          - apply_server_side_encryption_by_default {
+              - sse_algorithm     = "AES256" -> null
+                # (1 unchanged attribute hidden)
+            }
+        }
+    }
+
+  # module.storage.aws_s3_bucket_versioning.data will be destroyed
+  - resource "aws_s3_bucket_versioning" "data" {
+      - bucket                = "northstar-dev-data-829485866627" -> null
+      - id                    = "northstar-dev-data-829485866627" -> null
+        # (1 unchanged attribute hidden)
+
+      - versioning_configuration {
+          - status     = "Enabled" -> null
+            # (1 unchanged attribute hidden)
+        }
+    }
+
+  # module.storage.aws_s3_object.prefix["artifacts/"] will be destroyed
+  - resource "aws_s3_object" "prefix" {
+      - arn                           = "arn:aws:s3:::northstar-dev-data-829485866627/artifacts/" -> null
+      - bucket                        = "northstar-dev-data-829485866627" -> null
+      - bucket_key_enabled            = false -> null
+      - content_type                  = "application/octet-stream" -> null
+      - etag                          = "d41d8cd98f00b204e9800998ecf8427e" -> null
+      - force_destroy                 = false -> null
+      - id                            = "artifacts/" -> null
+      - key                           = "artifacts/" -> null
+      - metadata                      = {} -> null
+      - server_side_encryption        = "AES256" -> null
+      - storage_class                 = "STANDARD" -> null
+      - tags                          = {} -> null
+      - tags_all                      = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Project"     = "northstar"
+        } -> null
+      - version_id                    = "ab2od0h9qZgBnITHqfMKNR1A3IeSoxVl" -> null
+        # (14 unchanged attributes hidden)
+    }
+
+  # module.storage.aws_s3_object.prefix["features/"] will be destroyed
+  - resource "aws_s3_object" "prefix" {
+      - arn                           = "arn:aws:s3:::northstar-dev-data-829485866627/features/" -> null
+      - bucket                        = "northstar-dev-data-829485866627" -> null
+      - bucket_key_enabled            = false -> null
+      - content_type                  = "application/octet-stream" -> null
+      - etag                          = "d41d8cd98f00b204e9800998ecf8427e" -> null
+      - force_destroy                 = false -> null
+      - id                            = "features/" -> null
+      - key                           = "features/" -> null
+      - metadata                      = {} -> null
+      - server_side_encryption        = "AES256" -> null
+      - storage_class                 = "STANDARD" -> null
+      - tags                          = {} -> null
+      - tags_all                      = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Project"     = "northstar"
+        } -> null
+      - version_id                    = "WtSkdVCF8MVyXpPxczxlH36ksxG3SREQ" -> null
+        # (14 unchanged attributes hidden)
+    }
+
+  # module.storage.aws_s3_object.prefix["processed/"] will be destroyed
+  - resource "aws_s3_object" "prefix" {
+      - arn                           = "arn:aws:s3:::northstar-dev-data-829485866627/processed/" -> null
+      - bucket                        = "northstar-dev-data-829485866627" -> null
+      - bucket_key_enabled            = false -> null
+      - content_type                  = "application/octet-stream" -> null
+      - etag                          = "d41d8cd98f00b204e9800998ecf8427e" -> null
+      - force_destroy                 = false -> null
+      - id                            = "processed/" -> null
+      - key                           = "processed/" -> null
+      - metadata                      = {} -> null
+      - server_side_encryption        = "AES256" -> null
+      - storage_class                 = "STANDARD" -> null
+      - tags                          = {} -> null
+      - tags_all                      = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Project"     = "northstar"
+        } -> null
+      - version_id                    = "idA8Ys89qOmBavjPHtht7Mmhw7rR9TP9" -> null
+        # (14 unchanged attributes hidden)
+    }
+
+  # module.storage.aws_s3_object.prefix["raw/"] will be destroyed
+  - resource "aws_s3_object" "prefix" {
+      - arn                           = "arn:aws:s3:::northstar-dev-data-829485866627/raw/" -> null
+      - bucket                        = "northstar-dev-data-829485866627" -> null
+      - bucket_key_enabled            = false -> null
+      - content_type                  = "application/octet-stream" -> null
+      - etag                          = "d41d8cd98f00b204e9800998ecf8427e" -> null
+      - force_destroy                 = false -> null
+      - id                            = "raw/" -> null
+      - key                           = "raw/" -> null
+      - metadata                      = {} -> null
+      - server_side_encryption        = "AES256" -> null
+      - storage_class                 = "STANDARD" -> null
+      - tags                          = {} -> null
+      - tags_all                      = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Project"     = "northstar"
+        } -> null
+      - version_id                    = "vXmyzbdHk5KMHw7VlN3gPShs2HYBAq95" -> null
+        # (14 unchanged attributes hidden)
+    }
+
+  # module.vpc.aws_internet_gateway.this will be destroyed
+  - resource "aws_internet_gateway" "this" {
+      - arn      = "arn:aws:ec2:us-east-1:829485866627:internet-gateway/igw-06865d267241e2395" -> null
+      - id       = "igw-06865d267241e2395" -> null
+      - owner_id = "829485866627" -> null
+      - tags     = {
+          - "Name" = "northstar-dev-igw"
+        } -> null
+      - tags_all = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "northstar-dev-igw"
+          - "Project"     = "northstar"
+        } -> null
+      - vpc_id   = "vpc-0e01694bbaaab9f57" -> null
+    }
+
+  # module.vpc.aws_route_table.public will be destroyed
+  - resource "aws_route_table" "public" {
+      - arn              = "arn:aws:ec2:us-east-1:829485866627:route-table/rtb-08d16fe3190accb8d" -> null
+      - id               = "rtb-08d16fe3190accb8d" -> null
+      - owner_id         = "829485866627" -> null
+      - propagating_vgws = [] -> null
+      - route            = [
+          - {
+              - cidr_block                 = "0.0.0.0/0"
+              - gateway_id                 = "igw-06865d267241e2395"
+                # (11 unchanged attributes hidden)
+            },
+        ] -> null
+      - tags             = {
+          - "Name" = "northstar-dev-public-rt"
+        } -> null
+      - tags_all         = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "northstar-dev-public-rt"
+          - "Project"     = "northstar"
+        } -> null
+      - vpc_id           = "vpc-0e01694bbaaab9f57" -> null
+    }
+
+  # module.vpc.aws_route_table_association.public will be destroyed
+  - resource "aws_route_table_association" "public" {
+      - id             = "rtbassoc-0fc66bfc9b73fe032" -> null
+      - route_table_id = "rtb-08d16fe3190accb8d" -> null
+      - subnet_id      = "subnet-0a2a06c9cb5402189" -> null
+        # (1 unchanged attribute hidden)
+    }
+
+  # module.vpc.aws_security_group.this will be destroyed
+  - resource "aws_security_group" "this" {
+      - arn                    = "arn:aws:ec2:us-east-1:829485866627:security-group/sg-0dbda690a1320a5ad" -> null
+      - description            = "SageMaker Studio - inbound from VPC CIDR only, all outbound" -> null
+      - egress                 = [
+          - {
+              - cidr_blocks      = [
+                  - "0.0.0.0/0",
+                ]
+              - description      = "All outbound traffic"
+              - from_port        = 0
+              - ipv6_cidr_blocks = []
+              - prefix_list_ids  = []
+              - protocol         = "-1"
+              - security_groups  = []
+              - self             = false
+              - to_port          = 0
+            },
+        ] -> null
+      - id                     = "sg-0dbda690a1320a5ad" -> null
+      - ingress                = [
+          - {
+              - cidr_blocks      = [
+                  - "10.0.0.0/16",
+                ]
+              - description      = "All traffic from within the VPC"
+              - from_port        = 0
+              - ipv6_cidr_blocks = []
+              - prefix_list_ids  = []
+              - protocol         = "-1"
+              - security_groups  = []
+              - self             = false
+              - to_port          = 0
+            },
+        ] -> null
+      - name                   = "northstar-dev-sagemaker-sg" -> null
+      - owner_id               = "829485866627" -> null
+      - revoke_rules_on_delete = false -> null
+      - tags                   = {
+          - "Name" = "northstar-dev-sagemaker-sg"
+        } -> null
+      - tags_all               = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "northstar-dev-sagemaker-sg"
+          - "Project"     = "northstar"
+        } -> null
+      - vpc_id                 = "vpc-0e01694bbaaab9f57" -> null
+        # (1 unchanged attribute hidden)
+    }
+
+  # module.vpc.aws_subnet.public will be destroyed
+  - resource "aws_subnet" "public" {
+      - arn                                            = "arn:aws:ec2:us-east-1:829485866627:subnet/subnet-0a2a06c9cb5402189" -> null
+      - assign_ipv6_address_on_creation                = false -> null
+      - availability_zone                              = "us-east-1a" -> null
+      - availability_zone_id                           = "use1-az1" -> null
+      - cidr_block                                     = "10.0.100.0/24" -> null
+      - enable_dns64                                   = false -> null
+      - enable_lni_at_device_index                     = 0 -> null
+      - enable_resource_name_dns_a_record_on_launch    = false -> null
+      - enable_resource_name_dns_aaaa_record_on_launch = false -> null
+      - id                                             = "subnet-0a2a06c9cb5402189" -> null
+      - ipv6_native                                    = false -> null
+      - map_customer_owned_ip_on_launch                = false -> null
+      - map_public_ip_on_launch                        = true -> null
+      - owner_id                                       = "829485866627" -> null
+      - private_dns_hostname_type_on_launch            = "ip-name" -> null
+      - tags                                           = {
+          - "Name" = "northstar-dev-public-1"
+          - "Tier" = "public"
+        } -> null
+      - tags_all                                       = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "northstar-dev-public-1"
+          - "Project"     = "northstar"
+          - "Tier"        = "public"
+        } -> null
+      - vpc_id                                         = "vpc-0e01694bbaaab9f57" -> null
+        # (4 unchanged attributes hidden)
+    }
+
+  # module.vpc.aws_vpc.this will be destroyed
+  - resource "aws_vpc" "this" {
+      - arn                                  = "arn:aws:ec2:us-east-1:829485866627:vpc/vpc-0e01694bbaaab9f57" -> null
+      - assign_generated_ipv6_cidr_block     = false -> null
+      - cidr_block                           = "10.0.0.0/16" -> null
+      - default_network_acl_id               = "acl-07e238fc08c041008" -> null
+      - default_route_table_id               = "rtb-064b5c07a445b2ed0" -> null
+      - default_security_group_id            = "sg-0d85616e024afa374" -> null
+      - dhcp_options_id                      = "dopt-0d9e92e5b2b660349" -> null
+      - enable_dns_hostnames                 = true -> null
+      - enable_dns_support                   = true -> null
+      - enable_network_address_usage_metrics = false -> null
+      - id                                   = "vpc-0e01694bbaaab9f57" -> null
+      - instance_tenancy                     = "default" -> null
+      - ipv6_netmask_length                  = 0 -> null
+      - main_route_table_id                  = "rtb-064b5c07a445b2ed0" -> null
+      - owner_id                             = "829485866627" -> null
+      - tags                                 = {
+          - "Name" = "northstar-dev-vpc"
+        } -> null
+      - tags_all                             = {
+          - "Environment" = "dev"
+          - "ManagedBy"   = "terraform"
+          - "Name"        = "northstar-dev-vpc"
+          - "Project"     = "northstar"
+        } -> null
+        # (4 unchanged attributes hidden)
+    }
+
+Plan: 0 to add, 0 to change, 19 to destroy.
+
+Changes to Outputs:
+  - ml_engineer_role_arn = "arn:aws:iam::829485866627:role/northstar-dev-MLEngineer" -> null
+  - public_subnet_id     = "subnet-0a2a06c9cb5402189" -> null
+  - s3_bucket_name       = "northstar-dev-data-829485866627" -> null
+  - sagemaker_domain_id  = "d-lapbrmvpwgri" -> null
+  - vpc_id               = "vpc-0e01694bbaaab9f57" -> null
+module.vpc.aws_route_table_association.public: Destroying... [id=rtbassoc-0fc66bfc9b73fe032]
+module.iam.aws_iam_role_policy_attachment.ml_engineer: Destroying... [id=northstar-dev-MLEngineer-20260919052710160100000001]
+module.storage.aws_s3_bucket_server_side_encryption_configuration.data: Destroying... [id=northstar-dev-data-829485866627]
+module.storage.aws_s3_bucket_public_access_block.data: Destroying... [id=northstar-dev-data-829485866627]
+module.storage.aws_s3_object.prefix["artifacts/"]: Destroying... [id=artifacts/]
+module.storage.aws_s3_object.prefix["features/"]: Destroying... [id=features/]
+module.storage.aws_s3_object.prefix["processed/"]: Destroying... [id=processed/]
+module.storage.aws_s3_object.prefix["raw/"]: Destroying... [id=raw/]
+module.sagemaker.aws_sagemaker_user_profile.ml_engineer: Destroying... [id=arn:aws:sagemaker:us-east-1:829485866627:user-profile/d-lapbrmvpwgri/MLEngineer]
+module.iam.aws_iam_role_policy_attachment.ml_engineer: Destruction complete after 0s
+module.iam.aws_iam_policy.ml_engineer: Destroying... [id=arn:aws:iam::829485866627:policy/northstar-dev-MLEngineerPolicy]
+module.storage.aws_s3_bucket_server_side_encryption_configuration.data: Destruction complete after 0s
+module.storage.aws_s3_object.prefix["artifacts/"]: Destruction complete after 0s
+module.storage.aws_s3_object.prefix["raw/"]: Destruction complete after 0s
+module.storage.aws_s3_object.prefix["processed/"]: Destruction complete after 0s
+module.storage.aws_s3_object.prefix["features/"]: Destruction complete after 0s
+module.storage.aws_s3_bucket_versioning.data: Destroying... [id=northstar-dev-data-829485866627]
+module.vpc.aws_route_table_association.public: Destruction complete after 0s
+module.vpc.aws_route_table.public: Destroying... [id=rtb-08d16fe3190accb8d]
+module.storage.aws_s3_bucket_public_access_block.data: Destruction complete after 0s
+module.iam.aws_iam_policy.ml_engineer: Destruction complete after 1s
+module.storage.aws_s3_bucket_versioning.data: Destruction complete after 1s
+module.storage.aws_s3_bucket.data: Destroying... [id=northstar-dev-data-829485866627]
+module.storage.aws_s3_bucket.data: Destruction complete after 0s
+module.vpc.aws_route_table.public: Destruction complete after 1s
+module.vpc.aws_internet_gateway.this: Destroying... [id=igw-06865d267241e2395]
+module.vpc.aws_internet_gateway.this: Destruction complete after 1s
+module.sagemaker.aws_sagemaker_user_profile.ml_engineer: Destruction complete after 7s
+module.sagemaker.aws_sagemaker_domain.this: Destroying... [id=d-lapbrmvpwgri]
+module.sagemaker.aws_sagemaker_domain.this: Still destroying... [id=d-lapbrmvpwgri, 00m10s elapsed]
+module.sagemaker.aws_sagemaker_domain.this: Still destroying... [id=d-lapbrmvpwgri, 00m20s elapsed]
+module.sagemaker.aws_sagemaker_domain.this: Still destroying... [id=d-lapbrmvpwgri, 00m30s elapsed]
+module.sagemaker.aws_sagemaker_domain.this: Still destroying... [id=d-lapbrmvpwgri, 00m40s elapsed]
+module.sagemaker.aws_sagemaker_domain.this: Still destroying... [id=d-lapbrmvpwgri, 00m50s elapsed]
+module.sagemaker.aws_sagemaker_domain.this: Destruction complete after 54s
+module.iam.aws_iam_role.ml_engineer: Destroying... [id=northstar-dev-MLEngineer]
+module.vpc.aws_subnet.public: Destroying... [id=subnet-0a2a06c9cb5402189]
+module.vpc.aws_security_group.this: Destroying... [id=sg-0dbda690a1320a5ad]
+module.iam.aws_iam_role.ml_engineer: Destruction complete after 1s
+module.vpc.aws_subnet.public: Destruction complete after 1s
+module.vpc.aws_security_group.this: Destruction complete after 1s
+module.vpc.aws_vpc.this: Destroying... [id=vpc-0e01694bbaaab9f57]
+module.vpc.aws_vpc.this: Destruction complete after 1s
+
+Destroy complete! Resources: 19 destroyed.
