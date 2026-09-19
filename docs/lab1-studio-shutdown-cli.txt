@@ -1,0 +1,11 @@
+# Studio shutdown check - 2026-09-19T05:17:38Z
+# aws sagemaker list-apps --domain-id-equals d-ovhg2rmfpn2x
+---------------------------------------------------------
+|                       ListApps                        |
++---------+-------------------+----------+--------------+
+|   App   |       Space       | Status   |    Type      |
++---------+-------------------+----------+--------------+
+|  default|  lab1-smoke-test  |  Deleted |  JupyterLab  |
++---------+-------------------+----------+--------------+
+
+# Apps InService: 0

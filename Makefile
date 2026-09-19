@@ -9,7 +9,6 @@
 INFRA_DIR   ?= infrastructure
 LOCAL_ENV    = $(INFRA_DIR)/environments/local
 LOCAL_OUT    = docs/lab1b-localstack-output.txt
-BUCKET       = northstar-local-data-000000000000
 
 .PHONY: local-validate local-destroy local-clean
 
@@ -29,8 +28,10 @@ local-validate:
 	  echo "== awslocal sts get-caller-identity =="; \
 	  awslocal sts get-caller-identity; \
 	  echo; \
-	  echo "== awslocal s3 ls s3://$(BUCKET)/ --recursive =="; \
-	  awslocal s3 ls s3://$(BUCKET)/ --recursive; \
+	  BUCKET=$$(terraform -chdir=$(LOCAL_ENV) output -raw s3_bucket_name 2>/dev/null) \
+	    || { echo "ERROR: output s3_bucket_name is not defined in $(LOCAL_ENV)/outputs.tf — uncomment it"; exit 1; }; \
+	  echo "== awslocal s3 ls s3://$$BUCKET/ --recursive  (name from: terraform output s3_bucket_name) =="; \
+	  awslocal s3 ls s3://$$BUCKET/ --recursive; \
 	  echo; \
 	  echo "== awslocal iam list-roles (northstar*) =="; \
 	  awslocal iam list-roles --query 'Roles[?starts_with(RoleName, `northstar`)].RoleName'; \

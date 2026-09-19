@@ -194,6 +194,10 @@ else
   check "S No AWS credentials in git history (scripts/check-secrets.sh)" "FINDINGS — run: bash scripts/check-secrets.sh"
 fi
 
+[ -f "docs/lab1-architecture-diagram.png" ] \
+  && check "A1 Architecture diagram submitted" "PASS" \
+  || check "A1 Architecture diagram submitted" "docs/lab1-architecture-diagram.png MISSING"
+
 [ -f "docs/lab1-studio-shutdown.png" ] \
   && check "S Studio shutdown screenshot submitted" "PASS" \
   || check "S Studio shutdown screenshot submitted" "docs/lab1-studio-shutdown.png MISSING"
