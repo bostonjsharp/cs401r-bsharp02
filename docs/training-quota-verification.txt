@@ -1,0 +1,67 @@
+Pre-Lab 4 - SageMaker Training Quota Verification
+Account: 829485866627   Region: us-east-1   Captured: 2026-09-28
+Quota:   L-611FA074  (ml.m5.large for training job usage)
+
+================================================================
+1. Step 1 - AWS default vs. applied value
+================================================================
+
+$ aws service-quotas get-aws-default-service-quota \
+    --service-code sagemaker --quota-code L-611FA074 \
+    --query 'Quota.{Name:QuotaName,Default:Value}' --output json
+{
+    "Name": "ml.m5.large for training job usage",
+    "Default": 0.0
+}
+
+$ aws service-quotas get-service-quota \
+    --service-code sagemaker --quota-code L-611FA074 \
+    --query 'Quota.{Name:QuotaName,Applied:Value}' --output json
+{
+    "Name": "ml.m5.large for training job usage",
+    "Applied": 15.0
+}
+
+Side by side:
+
+    Quota                                   AWS default   Applied to my account
+    ml.m5.large training (on-demand)        0             15
+    ml.m5.large training (spot, L-29688C85) 4             10
+
+================================================================
+2. Step 2 / Step 4 - request status and current state
+================================================================
+
+$ aws service-quotas list-requested-service-quota-change-history-by-quota \
+    --service-code sagemaker --quota-code L-611FA074 \
+    --query 'RequestedQuotas[].{Status:Status,Requested:DesiredValue,Case:CaseId}' \
+    --output table
+(empty - no increase request has ever been filed for this quota on this account)
+
+$ aws service-quotas get-service-quota \
+    --service-code sagemaker --quota-code L-611FA074 \
+    --query 'Quota.Value' --output text
+15.0
+
+================================================================
+3. What I requested, why, and my fallback
+================================================================
+
+I did not file an increase request, because my applied quota is already 15
+and the value I would have asked for is 2. Lab 4's pipeline runs one
+ml.m5.large training job at a time; 2 covers that plus one overlapping job
+(for example, a rerun started while an earlier job is still finishing), and
+nothing in the lab needs more than that. Requesting 2 against an applied
+value of 15 would be a decrease, which Service Quotas does not accept, and
+asking for more than 15 would be capacity I cannot justify. The applied value
+differs from the AWS default of 0 even though the request history is empty,
+so AWS raised it on its own; this is the get-service-quota vs.
+get-aws-default-service-quota gap the pre-lab warns about, and I checked both
+rather than assuming. Because that applied value was granted without a request
+from me, I will re-run the Step 4 check right before starting Lab 4 instead
+of trusting this snapshot. If on-demand capacity is unavailable at that point,
+my fallback is spot training on ml.m5.large (L-29688C85: default 4, applied 10
+on my account), adding checkpointing and a retry to the training job since
+spot instances can be interrupted; the job trains in under two minutes on
+10,000 rows, so interruption risk is low. If I take that path I will note the
+change in my Lab 4 submission.
