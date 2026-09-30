@@ -150,6 +150,11 @@ fi
 # leaves them behind, and they refuse to delete while associations exist, so the
 # association graph has to be unwound first.
 echo "[6/7] Removing orphaned SageMaker lineage contexts and artifacts"
+# SageMaker writes these asynchronously after DeleteFeatureGroup, so on a fast
+# destroy they can appear a minute after this step first runs. Retry a few
+# times until nothing is left. (Added 2026-09-29 after the first Lab 2
+# teardown left 3 contexts and 1 artifact behind.)
+for attempt in 1 2 3 4; do
 for arn in $(aws sagemaker list-contexts --query 'ContextSummaries[*].ContextArn' --output text 2>/dev/null | tr '\t' '\n') \
            $(aws sagemaker list-artifacts --query 'ArtifactSummaries[*].ArtifactArn' --output text 2>/dev/null | tr '\t' '\n'); do
   [ -z "${arn}" ] && continue
@@ -168,6 +173,11 @@ done
 for c in $(aws sagemaker list-contexts --query 'ContextSummaries[*].ContextName' --output text 2>/dev/null | tr '\t' '\n'); do
   [ -z "${c}" ] && continue
   aws sagemaker delete-context --context-name "${c}" >/dev/null 2>&1 && echo "      deleted context ${c}"
+done
+remaining=$(( $(aws sagemaker list-contexts --query 'length(ContextSummaries)' --output text 2>/dev/null || echo 0)             + $(aws sagemaker list-artifacts --query 'length(ArtifactSummaries)' --output text 2>/dev/null || echo 0) ))
+[ "${remaining}" = "0" ] && break
+echo "      ${remaining} lineage entities still present, retrying in 20s (attempt ${attempt}/4)"
+sleep 20
 done
 
 # Empty CloudWatch log groups left by Glue job and crawler runs.

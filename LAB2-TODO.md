@@ -200,16 +200,21 @@ crawler during apply). Windows CRLF fix in verify-lab2.sh's tally file. NAT stil
       (the ~10k PutRecord calls take several minutes)
 - [x] If a job fails on permissions, wait ~30 s after an IAM fix before re-running
 - [x] `bash scripts/verify-lab2.sh | tee docs/lab2-verify-output.txt` -> 0 failed
-- [ ] Look at it in the console (learning, not graded): NAT Gateway, private route
+- [x] Look at it in the console (learning, not graded): NAT Gateway, private route
       table, Domain network settings, Glue job run, Feature Group
-- [ ] Commit and push
+- [x] Commit and push
 
 ## Phase 6 - Teardown and submit
 
-- [ ] `bash scripts/teardown-lab2.sh` -> "No billable Lab 2 resources remain"
-- [ ] `docs/lab2-destroy-output.txt` ends with `Destroy complete!`
+Status 2026-09-29 20:45: teardown ran 20:40-20:42, 46 destroyed, bucket emptied (78 versions).
+Step 6 raced SageMaker's async lineage writes (3 contexts + 1 artifact left); removed by hand,
+retry loop added to the script. Post-teardown check 15/15 OK -> docs/lab2-teardown-verification.txt.
+Only the state bucket + lock table remain. Remaining: tag + push + Canvas.
+
+- [x] `bash scripts/teardown-lab2.sh` -> "No billable Lab 2 resources remain"
+- [x] `docs/lab2-destroy-output.txt` ends with `Destroy complete!`
       (missing evidence caps Task 1 at half credit)
-- [ ] Commit and push the destroy output
-- [ ] `bash scripts/check-secrets.sh`
+- [x] Commit and push the destroy output
+- [x] `bash scripts/check-secrets.sh`
 - [ ] `git tag lab2-submit && git push origin lab2-submit`
 - [ ] Paste the repo URL into Canvas

@@ -1,0 +1,21 @@
+Lab 2 teardown verification - 2026-09-30T02:43:35Z - account 829485866627, us-east-1
+Live API checks, same as scripts/teardown-lab2.sh step 7, re-run after the lineage
+entities that SageMaker writes asynchronously were removed by hand.
+
+  NAT gateways           OK
+  Elastic IPs            OK
+  SageMaker domains      OK
+  Feature groups         OK
+  EFS filesystems        OK
+  Glue jobs              OK
+  Glue crawlers          OK
+  Glue databases         OK
+  NorthStar VPCs         OK
+  Glue ENIs              OK
+  Lineage contexts       OK
+  Lineage artifacts      OK
+  northstar IAM roles    OK
+  Data bucket            OK
+  /aws-glue log groups   OK
+
+Retained on purpose: Terraform state bucket northstar-tfstate-829485866627 and lock table northstar-tfstate-lock.

@@ -170,6 +170,7 @@ for anything still billing.
 | `docs/lab2-extend-output.txt` | `terraform apply` against AWS, ends `Apply complete!` |
 | `docs/lab2-verify-output.txt` | `verify-lab2.sh`, 0 failed |
 | `docs/lab2-destroy-output.txt` | `terraform destroy`, ends `Destroy complete!` |
+| `docs/lab2-teardown-verification.txt` | live API check after teardown: nothing billable remains |
 | `docs/lab2-data-contract.md` | contract for `processed/customers/` |
 | `docs/lab2-data-lineage.png` (+ `.drawio`) | lineage with formats and roles on every edge |
 

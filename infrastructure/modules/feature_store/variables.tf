@@ -22,9 +22,9 @@ variable "bucket_name" {
 }
 
 variable "offline_store_prefix" {
-  description = "Prefix under the bucket for the offline store. Kept apart from features/<dataset>/ so the two writers never interleave"
+  description = "Prefix under the bucket for the offline store, no trailing slash (Feature Store adds its own). Kept apart from features/<dataset>/ so the two writers never interleave"
   type        = string
-  default     = "features/offline-store/"
+  default     = "features/offline-store"
 }
 
 variable "execution_role_arn" {
