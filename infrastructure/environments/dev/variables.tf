@@ -28,8 +28,32 @@ variable "public_subnet_cidr" {
   default     = "10.0.100.0/24"
 }
 
+variable "private_subnet_cidr" {
+  description = "CIDR block for the private subnet that holds SageMaker and the Glue workers"
+  type        = string
+  default     = "10.0.1.0/24"
+}
+
+variable "enable_nat_gateway" {
+  description = "Create the NAT Gateway and its Elastic IP (the only hourly-billed network resource)"
+  type        = bool
+  default     = true
+}
+
+variable "enable_lifecycle_rules" {
+  description = "Attach the lifecycle configuration to the data bucket"
+  type        = bool
+  default     = true
+}
+
+variable "sagemaker_network_access_type" {
+  description = "How Studio apps reach the network: VpcOnly routes through the VPC and the NAT"
+  type        = string
+  default     = "VpcOnly"
+}
+
 variable "availability_zone" {
-  description = "Availability Zone for the public subnet"
+  description = "Availability Zone for the public and private subnets"
   type        = string
   default     = "us-east-1a"
 }

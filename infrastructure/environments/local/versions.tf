@@ -12,6 +12,11 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.0"
     }
+    # time_sleep in modules/iam waits out IAM propagation.
+    time = {
+      source  = "hashicorp/time"
+      version = "~> 0.12"
+    }
   }
 }
 

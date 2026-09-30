@@ -16,9 +16,11 @@ resource "aws_sagemaker_domain" "this" {
   vpc_id      = var.vpc_id
   subnet_ids  = var.subnet_ids
 
-  # Lab 1 places Studio in a public subnet with direct internet egress. Lab 2
-  # moves it to a private subnet and switches this to VpcOnly with a NAT.
-  app_network_access_type = "PublicInternetOnly"
+  # VpcOnly (Lab 2): Studio traffic leaves through the VPC, so from the private
+  # subnet it goes out via the NAT Gateway. PublicInternetOnly (Lab 1) sent it
+  # out a SageMaker-managed interface, bypassing the VPC routes entirely.
+  # Changing this or subnet_ids forces the Domain to be replaced.
+  app_network_access_type = var.app_network_access_type
 
   default_user_settings {
     execution_role  = var.execution_role_arn
@@ -58,8 +60,8 @@ resource "aws_sagemaker_domain" "this" {
   }
 }
 
-# The single Lab 1 persona. DataEngineer and ModelMonitor profiles arrive in
-# Lab 2 alongside the roles they need.
+# The one Studio persona. DataEngineer and ModelMonitor are service roles
+# (Glue, monitoring jobs); nobody opens Studio as them.
 resource "aws_sagemaker_user_profile" "ml_engineer" {
   domain_id         = aws_sagemaker_domain.this.id
   user_profile_name = "MLEngineer"

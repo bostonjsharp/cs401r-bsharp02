@@ -31,6 +31,17 @@ variable "execution_role_arn" {
   type        = string
 }
 
+variable "app_network_access_type" {
+  description = "How Studio apps reach the network: VpcOnly routes through the VPC, PublicInternetOnly bypasses it"
+  type        = string
+  default     = "VpcOnly"
+
+  validation {
+    condition     = contains(["VpcOnly", "PublicInternetOnly"], var.app_network_access_type)
+    error_message = "The app_network_access_type must be VpcOnly or PublicInternetOnly."
+  }
+}
+
 variable "security_group_ids" {
   description = "Security groups attached to Studio apps inside the VPC"
   type        = list(string)

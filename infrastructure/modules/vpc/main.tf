@@ -1,7 +1,9 @@
 # ── modules/vpc ──────────────────────────────────────────────────────────────
-# Lab 1 network layer: one VPC, one public subnet in a single AZ, an Internet
+# Network layer. Lab 1: one VPC, one public subnet in a single AZ, an Internet
 # Gateway, a route table that sends 0.0.0.0/0 to that gateway, and the
-# security group Studio runs behind. Only these six resource types live here.
+# security group Studio runs behind. Lab 2 adds a private subnet whose only
+# way out is a NAT Gateway parked in the public subnet, plus a free S3 gateway
+# endpoint so bucket traffic never touches the NAT.
 #
 # Every name is derived from var.project and var.environment; nothing under
 # modules/ hardcodes a project-environment literal.
@@ -22,8 +24,8 @@ resource "aws_vpc" "this" {
   }
 }
 
-# Single public subnet. Lab 2 adds private subnets; the Tier tag is what
-# scripts/verify-lab1.sh uses to confirm none exist yet.
+# Public subnet. Since Lab 2 its only tenant is the NAT Gateway; Studio and
+# the Glue workers moved to the private subnet below.
 resource "aws_subnet" "public" {
   vpc_id                  = aws_vpc.this.id
   cidr_block              = var.public_subnet_cidr
@@ -65,6 +67,91 @@ resource "aws_route_table" "public" {
 resource "aws_route_table_association" "public" {
   subnet_id      = aws_subnet.public.id
   route_table_id = aws_route_table.public.id
+}
+
+# ── Lab 2: private subnet behind a NAT Gateway ───────────────────────────────
+
+# No public IPs and no route to the IGW: nothing on the internet can open a
+# connection to anything in here. scripts/verify-lab2.sh finds this subnet by
+# its Name tag.
+resource "aws_subnet" "private" {
+  vpc_id                  = aws_vpc.this.id
+  cidr_block              = var.private_subnet_cidr
+  availability_zone       = var.availability_zone
+  map_public_ip_on_launch = false
+
+  tags = {
+    Name = "${local.name_prefix}-private-1"
+    Tier = "private"
+  }
+}
+
+# The NAT's fixed public address. Both NAT resources sit behind
+# enable_nat_gateway: the NAT bills by the hour on AWS and LocalStack
+# Community does not emulate it, so environments/local turns it off.
+resource "aws_eip" "nat" {
+  count  = var.enable_nat_gateway ? 1 : 0
+  domain = "vpc"
+
+  # An EIP can only be allocated into a VPC that already has an IGW attached.
+  depends_on = [aws_internet_gateway.this]
+
+  tags = {
+    Name = "${local.name_prefix}-eip"
+  }
+}
+
+# Lives in the PUBLIC subnet: the NAT itself needs the IGW route to reach the
+# internet on behalf of the private subnet.
+resource "aws_nat_gateway" "this" {
+  count         = var.enable_nat_gateway ? 1 : 0
+  allocation_id = aws_eip.nat[0].id
+  subnet_id     = aws_subnet.public.id
+
+  depends_on = [aws_internet_gateway.this]
+
+  tags = {
+    Name = "${local.name_prefix}-nat"
+  }
+}
+
+# The route is a separate resource (not an inline block) so the table still
+# exists, with only the implicit local route, when the NAT is disabled.
+resource "aws_route_table" "private" {
+  vpc_id = aws_vpc.this.id
+
+  tags = {
+    Name = "${local.name_prefix}-private-rt"
+  }
+}
+
+resource "aws_route" "private_nat" {
+  count                  = var.enable_nat_gateway ? 1 : 0
+  route_table_id         = aws_route_table.private.id
+  destination_cidr_block = "0.0.0.0/0"
+  nat_gateway_id         = aws_nat_gateway.this[0].id
+}
+
+resource "aws_route_table_association" "private" {
+  subnet_id      = aws_subnet.private.id
+  route_table_id = aws_route_table.private.id
+}
+
+# Gateway endpoints are free and add a prefix-list route to the private route
+# table, so S3 reads and writes (the bulk of what Glue moves) stay on the AWS
+# network instead of paying NAT data-processing charges.
+data "aws_region" "current" {}
+
+resource "aws_vpc_endpoint" "s3" {
+  count             = var.enable_s3_endpoint ? 1 : 0
+  vpc_id            = aws_vpc.this.id
+  service_name      = "com.amazonaws.${data.aws_region.current.name}.s3"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids   = [aws_route_table.private.id]
+
+  tags = {
+    Name = "${local.name_prefix}-s3-endpoint"
+  }
 }
 
 # Studio's security group: anything inside the VPC may reach it, nothing on

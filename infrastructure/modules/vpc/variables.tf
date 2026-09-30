@@ -23,7 +23,25 @@ variable "public_subnet_cidr" {
 }
 
 variable "availability_zone" {
-  description = "Availability Zone for the public subnet"
+  description = "Availability Zone for the public and private subnets"
   type        = string
   default     = "us-east-1a"
+}
+
+variable "private_subnet_cidr" {
+  description = "CIDR block for the private subnet that holds SageMaker and the Glue workers"
+  type        = string
+  default     = "10.0.1.0/24"
+}
+
+variable "enable_nat_gateway" {
+  description = "Create the Elastic IP, NAT Gateway, and private default route. Set false on LocalStack"
+  type        = bool
+  default     = true
+}
+
+variable "enable_s3_endpoint" {
+  description = "Create a free S3 gateway endpoint on the private route table so S3 traffic skips the NAT"
+  type        = bool
+  default     = true
 }

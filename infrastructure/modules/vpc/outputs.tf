@@ -14,3 +14,13 @@ output "security_group_id" {
   description = "ID of the SageMaker Studio security group"
   value       = aws_security_group.this.id
 }
+
+output "private_subnet_id" {
+  description = "ID of the private subnet"
+  value       = aws_subnet.private.id
+}
+
+output "availability_zone" {
+  description = "Availability Zone the subnets live in"
+  value       = aws_subnet.private.availability_zone
+}

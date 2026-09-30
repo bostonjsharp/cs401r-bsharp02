@@ -15,3 +15,9 @@ variable "prefixes" {
   type        = list(string)
   default     = ["raw/", "processed/", "features/", "artifacts/"]
 }
+
+variable "enable_lifecycle_rules" {
+  description = "Attach the lifecycle configuration to the data bucket. Set false on LocalStack"
+  type        = bool
+  default     = true
+}

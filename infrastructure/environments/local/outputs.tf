@@ -20,3 +20,18 @@ output "ml_engineer_role_arn" {
   description = "ARN of the MLEngineer role"
   value       = module.iam.ml_engineer_role_arn
 }
+
+output "private_subnet_id" {
+  description = "ID of the private subnet"
+  value       = module.vpc.private_subnet_id
+}
+
+output "data_engineer_role_arn" {
+  description = "ARN of the DataEngineer role"
+  value       = module.iam.data_engineer_role_arn
+}
+
+output "model_monitor_role_arn" {
+  description = "ARN of the ModelMonitor role"
+  value       = module.iam.model_monitor_role_arn
+}

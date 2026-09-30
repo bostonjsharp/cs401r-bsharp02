@@ -3,6 +3,7 @@
 # ONE bucket, four prefixes - not four buckets. Only these resource types
 # live here: aws_s3_bucket, aws_s3_bucket_public_access_block,
 # aws_s3_bucket_versioning, aws_s3_bucket_server_side_encryption_configuration,
+# aws_s3_bucket_lifecycle_configuration (Lab 2),
 # and aws_s3_object (one per prefix).
 
 # Bucket names are globally unique across all AWS accounts, so the account ID
@@ -72,5 +73,57 @@ resource "aws_s3_object" "prefix" {
 
   # Versioning must be on before the first object is written, otherwise the
   # prefix markers end up as unversioned "null" versions.
+  depends_on = [aws_s3_bucket_versioning.data]
+}
+
+# ── Lab 2: lifecycle rules ───────────────────────────────────────────────────
+# Versioning keeps every overwritten object forever unless something prunes
+# it. "expiration" acts on current versions; "noncurrent_version_expiration"
+# acts on the old versions left behind by an overwrite or delete.
+# artifacts/ has no rule on purpose: model artifacts are kept indefinitely.
+locals {
+  lifecycle_rules = {
+    expire-raw-data           = { prefix = "raw/", current_days = 90, noncurrent_days = null }
+    expire-raw-versions       = { prefix = "raw/", current_days = null, noncurrent_days = 30 }
+    expire-processed-versions = { prefix = "processed/", current_days = null, noncurrent_days = 30 }
+    expire-feature-versions   = { prefix = "features/", current_days = null, noncurrent_days = 60 }
+    # Nothing writes datacapture/ until Lab 5; the retention exists before
+    # the writer does.
+    expire-datacapture = { prefix = "datacapture/", current_days = 7, noncurrent_days = null }
+  }
+}
+
+resource "aws_s3_bucket_lifecycle_configuration" "data" {
+  count  = var.enable_lifecycle_rules ? 1 : 0
+  bucket = aws_s3_bucket.data.id
+
+  dynamic "rule" {
+    for_each = local.lifecycle_rules
+
+    content {
+      id     = rule.key
+      status = "Enabled"
+
+      filter {
+        prefix = rule.value.prefix
+      }
+
+      dynamic "expiration" {
+        for_each = rule.value.current_days == null ? [] : [rule.value.current_days]
+        content {
+          days = expiration.value
+        }
+      }
+
+      dynamic "noncurrent_version_expiration" {
+        for_each = rule.value.noncurrent_days == null ? [] : [rule.value.noncurrent_days]
+        content {
+          noncurrent_days = noncurrent_version_expiration.value
+        }
+      }
+    }
+  }
+
+  # Noncurrent-version rules are only meaningful on a versioned bucket.
   depends_on = [aws_s3_bucket_versioning.data]
 }
