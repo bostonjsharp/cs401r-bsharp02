@@ -209,12 +209,12 @@ crawler during apply). Windows CRLF fix in verify-lab2.sh's tally file. NAT stil
 Status 2026-09-29 20:45: teardown ran 20:40-20:42, 46 destroyed, bucket emptied (78 versions).
 Step 6 raced SageMaker's async lineage writes (3 contexts + 1 artifact left); removed by hand,
 retry loop added to the script. Post-teardown check 15/15 OK -> docs/lab2-teardown-verification.txt.
-Only the state bucket + lock table remain. Remaining: tag + push + Canvas.
+Only the state bucket + lock table remain. Tagged and pushed 21:46 (lab2-submit = 796c79f). Remaining: paste repo URL into Canvas.
 
 - [x] `bash scripts/teardown-lab2.sh` -> "No billable Lab 2 resources remain"
 - [x] `docs/lab2-destroy-output.txt` ends with `Destroy complete!`
       (missing evidence caps Task 1 at half credit)
 - [x] Commit and push the destroy output
 - [x] `bash scripts/check-secrets.sh`
-- [ ] `git tag lab2-submit && git push origin lab2-submit`
+- [x] `git tag lab2-submit && git push origin lab2-submit`
 - [ ] Paste the repo URL into Canvas
