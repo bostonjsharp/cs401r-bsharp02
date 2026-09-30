@@ -136,7 +136,9 @@ def line(status, label, detail=""):
     tally["pass" if status == G else "fail"] += 1
     print(f"  {status}  {label:<52} {detail}")
 def write_tally():
-    with open(f"{tmp}/dq_counts", "w") as fh:
+    # newline="\n": on Windows, text mode would write "\r\n" and bash's
+    # `read` below would keep the "\r", breaking the arithmetic.
+    with open(f"{tmp}/dq_counts", "w", newline="\n") as fh:
         fh.write(f"{tally['pass']} {tally['fail']}\n")
 try:
     import pandas as pd

@@ -185,16 +185,21 @@ rewritten, scripts/run-lab2-pipeline.sh added. Ready to commit.
 
 ## Phase 5 - AWS session (COSTS MONEY - one sitting)
 
-- [ ] `terraform plan` in `environments/dev` and read it
-- [ ] `terraform apply 2>&1 | tee ../../../docs/lab2-extend-output.txt`
+Status 2026-09-29 20:33: applied 20:16-20:19 (53 added, Domain took 1m55s), pipeline ran
+via workflow 20:20-20:31 (transform 115 s, features 187 s, counts identical to the dry run),
+verify 47/0. Fix applied live: ON_DEMAND start trigger enabled=false (it auto-fired the
+crawler during apply). Windows CRLF fix in verify-lab2.sh's tally file. NAT still up.
+
+- [x] `terraform plan` in `environments/dev` and read it
+- [x] `terraform apply 2>&1 | tee ../../../docs/lab2-extend-output.txt`
       (~15 min; file must contain `aws_sagemaker_domain` and end `Apply complete!`)
-- [ ] Do not overwrite `lab2-extend-output.txt` on later applies
-- [ ] Run crawler -> confirm table `customers` exists in `northstar_dev`
-- [ ] Run transform job -> SUCCEEDED -> Parquet in `processed/customers/`
-- [ ] Run feature-engineer job -> SUCCEEDED -> Parquet in `features/customers/`
+- [x] Do not overwrite `lab2-extend-output.txt` on later applies
+- [x] Run crawler -> confirm table `customers` exists in `northstar_dev`
+- [x] Run transform job -> SUCCEEDED -> Parquet in `processed/customers/`
+- [x] Run feature-engineer job -> SUCCEEDED -> Parquet in `features/customers/`
       (the ~10k PutRecord calls take several minutes)
-- [ ] If a job fails on permissions, wait ~30 s after an IAM fix before re-running
-- [ ] `bash scripts/verify-lab2.sh | tee docs/lab2-verify-output.txt` -> 0 failed
+- [x] If a job fails on permissions, wait ~30 s after an IAM fix before re-running
+- [x] `bash scripts/verify-lab2.sh | tee docs/lab2-verify-output.txt` -> 0 failed
 - [ ] Look at it in the console (learning, not graded): NAT Gateway, private route
       table, Domain network settings, Glue job run, Feature Group
 - [ ] Commit and push

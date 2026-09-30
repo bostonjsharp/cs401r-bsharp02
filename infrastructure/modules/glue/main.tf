@@ -277,6 +277,11 @@ resource "aws_glue_trigger" "start" {
   type          = "ON_DEMAND"
   workflow_name = aws_glue_workflow.pipeline[0].name
 
+  # For an ON_DEMAND trigger, "enabled" means "fire it now": with the default
+  # of true the crawler ran during terraform apply, racing the first real
+  # workflow run. Runs are started explicitly with start-workflow-run.
+  enabled = false
+
   actions {
     crawler_name = aws_glue_crawler.raw.name
   }
