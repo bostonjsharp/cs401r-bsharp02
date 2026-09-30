@@ -10,3 +10,4 @@ __pycache__/
 .aws/
 .localstack/
 .playwright-mcp/
+.dryrun/

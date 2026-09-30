@@ -22,6 +22,7 @@ from awsglue.job import Job
 from awsglue.utils import getResolvedOptions
 from pyspark.context import SparkContext
 from pyspark.sql import functions as F
+from pyspark.sql.types import StructType
 from pyspark.sql.window import Window
 
 # Target types for the processed zone. The crawler infers everything from CSV
@@ -40,6 +41,27 @@ SCHEMA = {
 
 NUMERIC_COLS = ["order_value", "num_items"]
 STRING_COLS = ["payment_method", "channel", "store_id", "product_category"]
+
+# Accepted purchase_date layouts, tried in order. to_date returns null on a
+# mismatch instead of raising, so the first non-null parse wins.
+DATE_FORMATS = ["yyyy-MM-dd", "MM/dd/yyyy"]
+
+
+def _as_string(df, name):
+    """The column as a string, flattening a Glue "choice" struct if present.
+
+    When a CSV column mixes values that look like different types (a number
+    in most rows, blank or whitespace in others), the DynamicFrame reader can
+    surface it as a struct with one field per candidate type. Coalescing the
+    fields recovers the original text so the cast below is the only cast.
+    """
+    field = df.schema[name]
+    if isinstance(field.dataType, StructType):
+        return F.coalesce(*[
+            F.col(f"{name}.{sub.name}").cast("string")
+            for sub in field.dataType.fields
+        ])
+    return F.col(name).cast("string")
 
 
 def cast_types(df):
@@ -63,8 +85,25 @@ def cast_types(df):
     key for every downstream feature, so a row without it cannot be
     attributed to anyone.
     """
-    # TODO: your implementation here
-    raise NotImplementedError("cast_types is not implemented")
+    # 1 + 2: trim, then turn the empty string into a real null. Done on every
+    # column as text, before any cast, so "  " and "" both become null rather
+    # than a cast failure.
+    for name in SCHEMA:
+        text = F.trim(_as_string(df, name))
+        df = df.withColumn(name, F.when(text == "", None).otherwise(text))
+
+    # 3: cast per SCHEMA. Dates try each accepted layout and keep the first
+    # that parses. Integers go through double first so "3.0" survives.
+    for name, target in SCHEMA.items():
+        if target == "date":
+            parsed = F.coalesce(*[F.to_date(F.col(name), fmt) for fmt in DATE_FORMATS])
+        elif target == "int":
+            parsed = F.col(name).cast("double").cast("int")
+        else:
+            parsed = F.col(name).cast(target)
+        df = df.withColumn(name, parsed)
+
+    return df.filter(F.col("customer_id").isNotNull())
 
 
 def impute_nulls(df):
@@ -79,8 +118,16 @@ def impute_nulls(df):
 
     Numeric columns: NUMERIC_COLS.  String columns: STRING_COLS.
     """
-    # TODO: your implementation here
-    raise NotImplementedError("impute_nulls is not implemented")
+    # approxQuantile skips nulls, and relativeError=0.0 makes it exact. One
+    # pass per column; each is a driver-side scalar, which is fine at this
+    # size.
+    fill = {}
+    for name in NUMERIC_COLS:
+        median = df.approxQuantile(name, [0.5], 0.0)[0]
+        fill[name] = int(round(median)) if name == "num_items" else float(median)
+    for name in STRING_COLS:
+        fill[name] = "unknown"
+    return df.fillna(fill)
 
 
 def deduplicate(df):
@@ -101,8 +148,17 @@ def deduplicate(df):
     A window function with row_number() over a partition by transaction_id
     is the idiomatic approach.
     """
-    # TODO: your implementation here
-    raise NotImplementedError("deduplicate is not implemented")
+    # Rank the copies of each transaction_id and keep rank 1. The ordering is
+    # total (date desc, value desc, then customer_id as a final tiebreak), so
+    # the surviving row does not depend on which partition Spark read first.
+    ranking = Window.partitionBy("transaction_id").orderBy(
+        F.col("purchase_date").desc_nulls_last(),
+        F.col("order_value").desc_nulls_last(),
+        F.col("customer_id").asc(),
+    )
+    return (df.withColumn("_rank", F.row_number().over(ranking))
+              .filter(F.col("_rank") == 1)
+              .drop("_rank"))
 
 
 def main():

@@ -63,3 +63,15 @@ variable "sagemaker_instance_type" {
   type        = string
   default     = "ml.t3.medium"
 }
+
+variable "glue_number_of_workers" {
+  description = "Glue workers per job run. Two G.1X workers are plenty for the 163k-row sample"
+  type        = number
+  default     = 2
+}
+
+variable "glue_job_timeout_minutes" {
+  description = "Minutes before a Glue job run is killed"
+  type        = number
+  default     = 30
+}
