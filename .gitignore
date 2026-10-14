@@ -11,3 +11,12 @@ __pycache__/
 .localstack/
 .playwright-mcp/
 .dryrun/
+
+# Lab 3
+.venv/
+model/
+output/
+evaluation_results/
+*.tar.gz
+*.faiss
+*.xgb
