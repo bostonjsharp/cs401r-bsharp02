@@ -406,19 +406,24 @@ forbids both and restricts incentives to benefits present in the context.
       varied, what it did). Section 2, Track B evaluation (Phase 2 bullets above).
       **2026-10-15: file created; section 2 (Track B) complete; section 1 is a scaffold with
       the local dry-run numbers in an HTML comment, to be replaced from the Phase 4 final run.**
-- [ ] `docs/lab3-model-design.md` (~700 words, not counting the track line; the
+- [x] `docs/lab3-model-design.md` (~700 words, not counting the track line; the
       evaluation tables now live in the report and are cross-referenced, not repeated):
       Churn model: why gradient boosting for ~10k rows, 13 tabular features,
       interpretability for the retention team; what would make you switch | What the
       features bought: baseline vs full with the headline numbers, which features were
       decorative | LLM system: RAG vs fine-tuning, primary production risk | Failure
       cases and mitigations (summary; detail in `track-b-examples.md`) | With 10x time
-      or data.
-- [ ] README: Lab 3 section covering how to train (local and the optional spot job),
+      or data. **2026-10-15: written from the local xgb-shallow numbers (HTML comment
+      marks them for refresh after Phase 4); names the behavioural-feature ablation as
+      the next experiment.**
+- [x] README: Lab 3 section covering how to train (local and the optional spot job),
       how to evaluate, where artifacts land (`artifacts/models/`, `artifacts/mlflow/`,
       `artifacts/athena-results/`, Model Registry group), how to run the harness and
-      the evidence collector, and what `docs/lab3-evidence/` contains.
-- [ ] Commit everything so far (no AWS evidence yet).
+      the evidence collector, and what `docs/lab3-evidence/` contains. **2026-10-15 done:
+      layout entries, 'Lab 3: model development' section, evidence paragraph.**
+- [~] Commit everything so far (no AWS evidence yet). Phase 2 committed by Boston as
+      d3d8fbc "phase 3" (2026-10-15 15:31); the Phase 3 files (README, design doc, this
+      file) are still uncommitted.
 
 ## Phase 4 - AWS session (**COSTS MONEY** - one sitting, same-day teardown)
 
