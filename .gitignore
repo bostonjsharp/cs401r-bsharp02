@@ -20,3 +20,4 @@ evaluation_results/
 *.tar.gz
 *.faiss
 *.xgb
+rag/index/

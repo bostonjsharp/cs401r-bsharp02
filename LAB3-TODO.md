@@ -304,24 +304,48 @@ hand-rolled ReAct-loop plan is obsolete and was removed from this file. Nothing 
 the Track C kit was copied into the repo.
 
 ### Track B: `rag/` (offer generation)
-- [ ] Fix the **three planted errors** in Template 3 of
+
+**Status 2026-10-15 afternoon: Phase 2 complete.** Harness run 2x for `before` (profile
+out of contexts) and `after` (profile in), plus strategies A/B/C once each; no NaN.
+`after`: faithfulness 0.554 (0.552-0.556), answer relevancy 0.391, context recall 0.671;
+`before` faithfulness 0.358. Reference ranges met. Evidence written:
+`docs/lab3-evidence/rag_eval.csv` (16 rows), `rag_eval_strategies.csv`,
+`track-b-examples.md`, report section 2 of `docs/lab3-evaluation-report.md`,
+`notebooks/lab3-demo.ipynb` executed (counts 1..7). Fixes along the way: the one NaN was
+the judge's reply hitting langchain's default max_tokens (not throttling), so
+`build_bedrock_judge` now sets `max_tokens=4096`; banned filler phrases moved into the
+user turn (Haiku ignored them in the system prompt); the store count came out of the
+persona line because the model kept quoting it. Bedrock spend today about $1.50.
+Previous status (2026-10-14 evening): pipeline built and generating; harness runs not yet done.**
+`rag/corpus.py` (section chunks, 48; fixed-window alternative kept for comparison),
+`rag/bedrock.py` (Titan V2 + Haiku Converse, throttling retry, usage counters),
+`rag/index.py` (FAISS inner-product over normalised vectors, cached in `rag/index/`),
+`rag/retrieve.py` (A, B, C, AB), `rag/generate.py` (prompt assembly + profile
+interpretation), `rag/pipeline.py` (`OfferPipeline.invoke`, `--no-profile` switch),
+`rag/run_eval.py` (N runs, NaN re-judge of the same answer, per-run + combined CSV,
+summary md/json with judge named and generator cost), `rag/prompts/` (system prompt,
+user prompt, corrected tier guidelines with the 3 errors named). Harness main's
+placeholder is wired to the pipeline. First offers showed the instructor's two
+failure modes exactly (filler openers, invented "1,000 bonus points"); prompt now
+forbids both and restricts incentives to benefits present in the context.
+- [x] Fix the **three planted errors** in Template 3 of
       `prompt_templates/offer_generation_prompts.md` against `loyalty-program-terms.md`
       and `shipping-policy.md` and name them in the report:
       1. Gold threshold is $2,000-$4,999.99 (template says to $9,999.99)
       2. Platinum starts at $5,000 (template says $10,000)
       3. "free expedited shipping on orders over $200" exists at no tier
-- [ ] Fix the two documented weaknesses: tier never reaches the model (Template 1);
+- [x] Fix the two documented weaknesses: tier never reaches the model (Template 1);
       raw numbers with no interpretation (Template 2).
-- [ ] Chunk by markdown section with doc ID metadata (size/overlap documented), embed
+- [x] Chunk by markdown section with doc ID metadata (size/overlap documented), embed
       with Titan V2 (justify vs Cohere), FAISS locally, implement the three retrieval
       queries in Template 4 and measure context recall for each.
-- [ ] Generation with Haiku 4.5 inference profile; `temperature` or `topP`, not both.
+- [x] Generation with Haiku 4.5 inference profile; `temperature` or `topP`, not both.
       Prompt hygiene (each of these is an unsupported claim to the judge): no warm-up
       filler ("We've missed you!"), no invented terms ("use within 14 days"); every
       sentence must trace to a retrieved chunk or to the customer profile.
-- [ ] Handle the tier-definition gap (feature store = lifetime value, policy =
+- [x] Handle the tier-definition gap (feature store = lifetime value, policy =
       trailing 12 months): phrase tier benefits conditionally, say so in the doc.
-- [ ] Wire `rag_invoke_fn(customer_context, question) -> {"answer", "contexts"}` into
+- [x] Wire `rag_invoke_fn(customer_context, question) -> {"answer", "contexts"}` into
       the harness; `build_bedrock_judge` is already there so no OpenAI key is needed.
       **`contexts` = retrieved chunks + one extra entry
       `"Customer profile: loyalty_tier=Gold; days_since_last_purchase=47; top_categories=..."`**,
@@ -329,7 +353,7 @@ the Track C kit was copied into the repo.
       otherwise and marks every profile fact in the offer as unsupported (instructor
       measured faithfulness 0.38 -> 0.60 from this alone). The flag is also our
       before/after experiment.
-- [ ] Runner `rag/run_eval.py` around `RAGEvaluator` (which already returns per-case rows
+- [x] Runner `rag/run_eval.py` around `RAGEvaluator` (which already returns per-case rows
       via `scores.to_pandas()`): run all 4 cases N times (default 2; the handout says 2-3
       and saw about +/-0.1 on faithfulness between identical runs); keep every per-run
       CSV; write a summary with per-case scores, per-metric mean and min-max range, and
@@ -337,10 +361,11 @@ the Track C kit was copied into the repo.
       failed judge call (Bedrock throttling), not a zero**: re-run that case (bounded
       retries), never average it in or report it. Concatenate the runs with a `run`
       column into `docs/lab3-evidence/rag_eval.csv` (collector wants >= 4 rows).
-- [ ] Before/after experiment (4 pts): profile NOT in contexts (2 runs) vs profile in
+- [x] Before/after experiment (4 pts): profile NOT in contexts (2 runs) vs profile in
       contexts (2 runs). Report both tables and say whether it helped. Honest measurement
-      earns full marks either way.
-- [ ] Per-metric limits (6 pts), seeded from the handout, confirmed on our own per-case
+      earns full marks either way. Result: faithfulness +0.196 (0.358 -> 0.554, ranges do
+      not overlap), answer relevancy +0.018 (noise), context recall unchanged. Report 2.4.
+- [x] Per-metric limits (6 pts), seeded from the handout, confirmed on our own per-case
       output and cited by case: **context recall** ceiling 0.61-0.67 because ground
       truths contain grading commentary the corpus never states (case 3 "a heavy
       percentage discount destroys margin", case 2 "proportionate to a $312 lifetime
@@ -348,19 +373,25 @@ the Track C kit was copied into the repo.
       relevancy** reverse-generates questions from the answer and compares them to the
       original, but our "questions" are instructions and the answers are marketing copy,
       ceiling about 0.73; **faithfulness** is the one we can move, and it penalises
-      profile facts unless the profile is a context.
-- [ ] Reference ranges to sanity-check against (instructor pipeline, 2026-10-12):
+      profile facts unless the profile is a context. Written as report 2.3, citing the Gold
+      redemption/expiration hallucination, the Bronze 0.286-with-no-errors case, Platinum
+      recall stuck at 0.333 under every strategy, Silver recall 1.0/0.5 on identical contexts.
+- [x] Reference ranges to sanity-check against (instructor pipeline, 2026-10-12):
       faithfulness 0.47-0.68, answer relevancy 0.38-0.45, context recall 0.53-0.58.
       If ours sit there, the pipeline is fine. A stronger judge does not change them.
-- [ ] `docs/lab3-evidence/track-b-examples.md`: 5 correct input/output pairs + 2
+      Ours (after): 0.554 / 0.391 / 0.671, inside on the first two, at the recall ceiling.
+- [x] `docs/lab3-evidence/track-b-examples.md`: 5 correct input/output pairs + 2
       documented failure cases. For each: customer profile, generated offer, IDs of the
       retrieved chunks. For each failure: the fix we propose. Record the judge model.
-- [ ] Track B section of `docs/lab3-evaluation-report.md`: the two run tables, mean and
+- [x] Track B section of `docs/lab3-evaluation-report.md`: the two run tables, mean and
       range, judge, per-metric limits, before/after with judgement.
-- [ ] `notebooks/lab3-demo.ipynb`: load the index, run the 4 cases, show one
+- [x] `notebooks/lab3-demo.ipynb`: load the index, run the 4 cases, show one
       before/after. Execute with **Kernel > Restart & Run All** in the venv, save, commit
       with outputs. The collector fails it without outputs and warns if execution counts
-      are not exactly 1..N.
+      are not exactly 1..N. Built and executed headlessly by nbclient (see
+      scratch `build_notebook.py` flow: nbformat cells -> NotebookClient.execute with cwd =
+      repo root); 7 code cells, counts 1..7, no errors; reads the two committed evidence
+      CSVs so it makes only 5 generator calls. Re-execute the same way if rag/ changes.
 
 ## Phase 3 - Docs (FREE)
 
@@ -373,6 +404,8 @@ the Track C kit was copied into the repo.
       `lab3-evidence/slice-evaluation.csv` with n and positives per tier, weakest tier
       discussed, too-small tiers called out | MLflow experiment summary (3 runs, what
       varied, what it did). Section 2, Track B evaluation (Phase 2 bullets above).
+      **2026-10-15: file created; section 2 (Track B) complete; section 1 is a scaffold with
+      the local dry-run numbers in an HTML comment, to be replaced from the Phase 4 final run.**
 - [ ] `docs/lab3-model-design.md` (~700 words, not counting the track line; the
       evaluation tables now live in the report and are cross-referenced, not repeated):
       Churn model: why gradient boosting for ~10k rows, 13 tabular features,

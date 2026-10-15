@@ -359,7 +359,12 @@ def build_bedrock_judge(model_id: str, region: str = "us-east-1"):
 
     llm = LangchainLLMWrapper(ChatBedrock(
         model_id=model_id, region_name=region,
-        model_kwargs={"temperature": 0},   # judging should be deterministic
+        # temperature 0: judging should be deterministic. max_tokens: langchain's
+        # default is too small for Haiku 4.5's faithfulness verdict JSON on a
+        # 4-5 statement answer; the truncated reply raises LLMDidNotFinishException
+        # inside ragas, which surfaces as a NaN score (observed 2026-10-15, case
+        # CUST-10000122, reproducible on every retry, so not throttling).
+        model_kwargs={"temperature": 0, "max_tokens": 4096},
     ))
     embeddings = LangchainEmbeddingsWrapper(BedrockEmbeddings(
         model_id="amazon.titan-embed-text-v2:0", region_name=region,
@@ -692,18 +697,17 @@ def main():
         print("Track B: Offer Generation RAG Evaluation")
         print("=" * 50)
 
-        # TODO: Wire up your actual RAG invocation function here.
-        # The function receives (customer_context: dict, question: str)
-        # and must return {"answer": str, "contexts": list[str]}
-        def placeholder_rag_fn(context, question):
-            """Replace this with your actual RAG system invocation."""
-            raise NotImplementedError(
-                "TODO: Replace this placeholder with your RAG system invocation.\n"
-                "The function should call your Bedrock + vector store pipeline\n"
-                "and return {'answer': str, 'contexts': list[str]}"
-            )
+        # Track B pipeline: rag/pipeline.py (section-chunked policy corpus,
+        # Titan V2 + FAISS retrieval, Haiku 4.5 generation). Its invoke()
+        # returns {"answer", "contexts", ...}; the customer profile is appended
+        # to contexts so the judge can see what the offer was grounded in.
+        # rag/run_eval.py wraps this same evaluator for repeated runs, NaN
+        # retries and the before/after experiment.
+        from rag.pipeline import make_rag_invoke_fn
+        rag_invoke_fn, pipeline = make_rag_invoke_fn()
+        print(f"Pipeline config: {pipeline.config}")
 
-        evaluator = RAGEvaluator(rag_invoke_fn=placeholder_rag_fn,
+        evaluator = RAGEvaluator(rag_invoke_fn=rag_invoke_fn,
                                  bedrock_model_id=args.bedrock_model_id,
                                  region=args.region)
         results = evaluator.run(OFFER_TEST_CASES)
