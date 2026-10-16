@@ -1,0 +1,5 @@
+tier,n,positives,contacted,auc,recall,precision,recall_gap_vs_aggregate,flagged,too_small
+Bronze,1071,361,218,0.7596,0.4515,0.7477,0.1258,False,False
+Gold,483,52,7,0.7462,0.1154,0.8571,-0.2104,True,False
+Platinum,307,21,5,0.8818,0.1429,0.6,-0.1829,True,False
+Silver,1139,226,70,0.7145,0.1903,0.6143,-0.1355,True,False

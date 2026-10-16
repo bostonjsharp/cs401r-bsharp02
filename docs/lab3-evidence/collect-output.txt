@@ -1,0 +1,34 @@
+2026/10/16 17:28:10 INFO mlflow.agent.hint: Load the `instrumenting-with-mlflow-tracing` skill at D:\dev\bost\cs401r-bsharp02\.venv\Lib\site-packages\mlflow\assistant\skills\instrumenting-with-mlflow-tracing\SKILL.md before writing any tracing code; it ships with this MLflow install. Set MLFLOW_DISABLE_AGENT_HINT=1 to silence this.
+==> Lab 3 evidence  (track B, us-east-1)
+[1/5] Identity
+  OK    account 829485866627  --  arn:aws:iam::829485866627:user/cs401r-lab
+[2/5] Evidence files
+  OK    docs/lab3-evidence/train-final.log
+  OK    docs/lab3-evidence/evaluation_metrics.json
+  OK    docs/lab3-evidence/slice-evaluation.csv
+  OK    docs/lab3-evidence/confusion-matrix.png
+  OK    docs/lab3-evidence/feature-importance.png
+  OK    docs/lab3-evaluation-report.md
+  OK    docs/lab3-model-design.md
+  OK    docs/bedrock-access-verification.txt
+  OK    notebooks/lab3-demo.ipynb
+  OK    docs/lab3-evidence/rag_eval.csv
+  OK    docs/lab3-evidence/track-b-examples.md
+[3/5] Content checks
+  OK    gate precision_top10 >= 0.50
+  OK    gate recall_top10 >= 0.25
+  OK    gate lift 95% CI excludes zero
+  OK    slice-evaluation.csv  --  4 tiers
+  OK    demo notebook  --  7 code cells, one clean run, 7 with output
+  OK    rag_eval.csv  --  16 test cases (harness has 4+)
+[4/5] AWS exports: Athena, MLflow, Model Registry
+  OK    Athena query  --  8b453353-e276-49e1-8528-6f9dca56842a SUCCEEDED, 682217 bytes scanned
+  OK    MLflow App reuses Lab 1 infrastructure  --  northstar-dev-MLEngineer, s3://northstar-dev-data-829485866627/artifacts/mlflow/
+  OK    MLflow runs  --  4 runs with params and metrics in 'northstar-churn'
+  OK    MLflow runs vary  --  eta, num_round, max_depth, feature_set, n_features
+  OK    consistency: MLflow  --  a tracked run matches auc_roc=0.7835
+  OK    Model Registry  --  1 PendingManualApproval version(s); latest v1
+  OK    consistency: registry  --  v1 metadata matches evaluation_metrics.json
+[5/5] Summary
+  25 OK, 0 WARN, 0 FAIL
+  Evidence complete. Next: bash scripts/teardown-lab3.sh, then commit and tag lab3-submit.

@@ -5,34 +5,102 @@ report; section 2 is the Track B evaluation.
 
 ## 1. Churn model (Task 1)
 
-<!-- Filled from the final tracked training run in Phase 4 (the run that logs to
-MLflow, registers the model and writes docs/lab3-evidence/). Until then the
-numbers below are from the local dry-run on .dryrun/features.csv with the same
-configuration (xgb-shallow: max_depth 3, eta 0.05, 400 rounds, early stopping 20,
-scale_pos_weight = neg/pos). -->
+All numbers in this section are from the graded run `xgb-final` on 2026-10-16
+(`docs/lab3-evidence/train-final.log`, Athena QueryExecutionId
+`8b453353-e276-49e1-8528-6f9dca56842a`, 9,999 rows from the Feature Store
+offline store), which is also MLflow run `ea8525a9f11b4c64851faf6519750551` and
+Model Registry version 1 of `northstar-churn-models` (PendingManualApproval).
+The collector confirmed the three agree (`collect-output.txt`: 25 OK, 0 WARN,
+0 FAIL). Configuration: `max_depth` 3, `eta` 0.05, up to 400 rounds with early
+stopping on validation AUC (patience 20), `min_child_weight` 5, `subsample` 0.8,
+`colsample_bytree` 0.8, `scale_pos_weight` 3.5448 (negatives/positives of the
+training split), seed 42; XGBoost 3.4.1; stratified 70/30 split.
 
-### 1.1 Metrics
+### 1.1 Metrics (`evaluation_metrics.json`)
 
 | metric | value |
 |---|---|
-| auc_roc | 0.7835 |
-| precision_top10 | 0.7167 |
+| auc_roc | **0.7835** |
+| precision_top10 (top 10% of 3,000 validation rows contacted) | 0.7167 |
 | recall_top10 | 0.3258 |
-| baseline_auc_roc (days_since_last_purchase only) | 0.7225 |
-| lift vs baseline (AUC) | +0.0610 |
+| baseline_auc (model on `days_since_last_purchase` alone) | 0.7225 |
+| auc_vs_baseline | +0.0610 |
 | lift 95% CI (bootstrap, 1,000 resamples) | [0.0425, 0.0797] |
 | best_iteration | 115 |
+| n_features | 11 |
+| n_val_samples / positive_rate_val | 3,000 / 0.22 |
 
-Confusion matrix at the top-10% cutoff: `docs/lab3-evidence/confusion-matrix.png`.
-Feature importance (gain): `docs/lab3-evidence/feature-importance.png`.
+Both promotion gates in the script pass: precision@10 0.7167 >= 0.50, recall@10
+0.3258 >= 0.25, and the lift CI excludes zero. The lift over recency is modest;
+`docs/lab3-model-design.md` discusses what the extra features bought and the
+ablation behind that discussion.
 
-### 1.2 Slices
+### 1.2 Confusion matrix at the top-10% cutoff
 
-Per-tier evaluation at the *global* top-10% cutoff: `docs/lab3-evidence/slice-evaluation.csv`.
+Threshold 0.6372 on predicted probability contacts 300 customers.
 
-(To be written from the final run: the Bronze tier absorbs roughly two thirds of
-the contact budget; Gold, Silver and Platinum recall fall more than 10 points
-below the aggregate; Platinum has too few positives for a stable estimate.)
+| | predicted stay | predicted churn (contacted) |
+|---|---|---|
+| actual stay (2,340) | 2,255 | 85 |
+| actual churn (660) | 445 | 215 |
+
+![confusion matrix](lab3-evidence/confusion-matrix.png)
+
+### 1.3 Feature importance (gain)
+
+![feature importance](lab3-evidence/feature-importance.png)
+
+`purchase_frequency_180d` and `days_since_last_purchase` lead (about 87 gain
+each), then `purchase_frequency_30d` (41) and `avg_order_value` (31);
+`category_diversity_score`, `online_to_store_ratio` and `customer_tenure_days`
+trail at 13 to 15. The ablation in `experiments/ablation.py` shows gain
+understates the behavioural pair (dropping both costs 0.0054 AUC, the largest
+loss tested) and overstates `purchase_frequency_180d` (0.0005, redundant with
+the 30/90-day columns).
+
+### 1.4 Slices by loyalty tier (`slice-evaluation.csv`)
+
+Global top-10% cutoff applied per tier. Flagged = recall more than 10 points
+below the aggregate 0.3258. `too_small` would mark a tier with fewer than 100
+rows or 10 positives; none is.
+
+| tier | n | positives | contacted | AUC | recall | precision | gap vs aggregate | flagged |
+|---|---|---|---|---|---|---|---|---|
+| Bronze | 1,071 | 361 | 218 | 0.7596 | 0.4515 | 0.7477 | +0.126 | no |
+| Silver | 1,139 | 226 | 70 | 0.7145 | 0.1903 | 0.6143 | -0.136 | yes |
+| Gold | 483 | 52 | 7 | 0.7462 | 0.1154 | 0.8571 | -0.210 | yes |
+| Platinum | 307 | 21 | 5 | 0.8818 | 0.1429 | 0.6000 | -0.183 | yes |
+
+The weakest tier by AUC is Silver (0.7145), but the operational problem is the
+cutoff, not the ranking: a single global threshold hands Bronze 218 of the 300
+contact slots because Bronze customers churn at 34% against 11% for Gold, so
+every other tier's recall falls more than 10 points below the aggregate.
+Platinum ranks best (AUC 0.88) yet 3 of its 21 churners are contacted. Platinum
+is above the `too_small` floor but 21 positives make its recall a coarse
+estimate (each churner is 4.8 points). A per-tier contact budget is the fix
+proposed in the design doc.
+
+### 1.5 MLflow experiment `northstar-churn` (`mlflow-runs.csv`)
+
+Four runs in the MLflow App `northstar-mlflow`, each with 14 params and 28
+metrics; `feature_set` and the hyperparameters are logged as params so the runs
+differ on more than the seed.
+
+| run | max_depth | eta | num_round | feature_set | best_iter | AUC | P@10 | R@10 |
+|---|---|---|---|---|---|---|---|---|
+| xgb-baseline | 6 | 0.10 | 200 | base_11 | 13 | 0.7818 | 0.6967 | 0.3167 |
+| xgb-shallow | 3 | 0.05 | 400 | base_11 | 115 | 0.7835 | 0.7167 | 0.3258 |
+| xgb-plus-risk | 6 | 0.10 | 200 | base_11+churn_risk_score | 12 | 0.7787 | 0.7100 | 0.3227 |
+| xgb-final (registered) | 3 | 0.05 | 400 | base_11 | 115 | 0.7835 | 0.7167 | 0.3258 |
+
+What varied and what it did: shallower trees with a smaller learning rate
+(xgb-shallow) gained 0.002 AUC and 2 points of precision@10 over the default,
+and needed 115 rounds instead of 13 to get there, which is the expected trade
+of depth for rounds. Adding `churn_risk_score` (xgb-plus-risk) lost 0.003 AUC
+and collapsed early stopping to round 12: the model leaned on the pre-computed
+recency heuristic instead of learning from the raw features. The final run
+repeats the xgb-shallow configuration so that the registered version and the
+evidence files carry one set of numbers.
 
 ## 2. Track B evaluation
 

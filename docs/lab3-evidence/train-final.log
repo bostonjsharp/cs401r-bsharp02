@@ -1,0 +1,67 @@
+============================================================
+NorthStar Churn Prediction — Training Script
+============================================================
+Run: xgb-final | feature set: base_11 | xgboost 3.4.1 | register: True
+Loading features from Feature Store offline store via Athena: sagemaker_featurestore.northstar_dev_customer_features_1792192352
+Athena QueryExecutionId: 8b453353-e276-49e1-8528-6f9dca56842a
+  9,999 rows x 14 columns from Athena
+Preprocessing 9,999 samples...
+  No missing feature values
+  Positive class rate: 22.0%
+  Feature matrix shape: (9999, 11)
+
+Train: 6,999 | Validation: 3,000
+
+Training XGBoost with params: {
+  "objective": "binary:logistic",
+  "eval_metric": [
+    "logloss",
+    "auc"
+  ],
+  "max_depth": 3,
+  "eta": 0.05,
+  "min_child_weight": 5,
+  "subsample": 0.8,
+  "colsample_bytree": 0.8,
+  "scale_pos_weight": 3.544805194805195,
+  "seed": 42,
+  "verbosity": 1
+}
+[0]	train-logloss:0.68366	train-auc:0.73363	validation-logloss:0.68375	validation-auc:0.73080
+[25]	train-logloss:0.56386	train-auc:0.78386	validation-logloss:0.56772	validation-auc:0.77609
+[50]	train-logloss:0.53483	train-auc:0.79139	validation-logloss:0.54117	validation-auc:0.77987
+[75]	train-logloss:0.52348	train-auc:0.80090	validation-logloss:0.53407	validation-auc:0.78160
+[100]	train-logloss:0.51462	train-auc:0.80962	validation-logloss:0.52876	validation-auc:0.78406
+[125]	train-logloss:0.50811	train-auc:0.81762	validation-logloss:0.52617	validation-auc:0.78441
+[135]	train-logloss:0.50560	train-auc:0.82042	validation-logloss:0.52547	validation-auc:0.78353
+
+── Evaluation Results ──────────────────────────────
+  precision_top10          : 0.7167  (threshold: 0.5000)  ✓ PASS
+  recall_top10             : 0.3258  (threshold: 0.2500)  ✓ PASS
+  auc_lift 95% CI          : [0.0425, 0.0797]  (must exclude 0)  ✓ PASS
+  All thresholds passed ✓
+  Confusion matrix @ top-10% cutoff (score >= 0.6372): TP=215 FP=85 FN=445 TN=2255
+
+── Slice Evaluation by loyalty_tier (cutoff from full val set, aggregate recall 0.3258) ──
+  tier           n   pos     auc  recall    prec  note
+  Bronze      1071   361  0.7596  0.4515  0.7477  
+  Gold         483    52  0.7462  0.1154  0.8571  FLAGGED: recall >10pp below aggregate
+  Platinum     307    21  0.8818  0.1429  0.6000  FLAGGED: recall >10pp below aggregate
+  Silver      1139   226  0.7145  0.1903  0.6143  FLAGGED: recall >10pp below aggregate
+✓ Wrote docs/lab3-evidence\slice-evaluation.csv
+
+✓ Wrote docs/lab3-evidence\confusion-matrix.png and docs/lab3-evidence\feature-importance.png
+
+✓ Model saved to ./model\model.json
+✓ Uploaded s3://northstar-dev-data-829485866627/artifacts/models/churn/xgb-final/model.tar.gz
+✓ Created model package group northstar-churn-models
+✓ Registered arn:aws:sagemaker:us-east-1:829485866627:model-package/northstar-churn-models/1 as PendingManualApproval
+
+✓ Logged to MLflow App: experiment 'northstar-churn', run 'xgb-final' (ea8525a9f11b4c64851faf6519750551), 14 params, 28 metrics
+🏃 View run xgb-final at: https://mlflow.sagemaker.us-east-1.app.aws/#/experiments/1/runs/ea8525a9f11b4c64851faf6519750551
+🧪 View experiment at: https://mlflow.sagemaker.us-east-1.app.aws/#/experiments/1
+✓ Wrote docs/lab3-evidence\evaluation_metrics.json
+
+============================================================
+Training complete. AUC-ROC: 0.7835 (recency baseline 0.7225, lift CI [0.0425, 0.0797])
+============================================================

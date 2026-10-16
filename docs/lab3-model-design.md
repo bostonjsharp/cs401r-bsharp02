@@ -2,9 +2,8 @@ Track declaration: Track B (RAG offer generation)
 
 # Lab 3 Model Design
 
-<!-- Numbers are from the local dry-run of the final configuration (xgb-shallow)
-on .dryrun/features.csv. Refresh from docs/lab3-evidence/evaluation_metrics.json
-after the Phase 4 graded run; the argument does not depend on the last digit. -->
+<!-- Numbers are from the graded run (docs/lab3-evidence/evaluation_metrics.json,
+MLflow run xgb-final, 2026-10-16); the local dry-run reproduced them exactly. -->
 
 ## Churn model
 
@@ -40,18 +39,20 @@ top-10% contact list, precision is 0.717 and recall 0.326 (215 of 660
 churners). Recency carries most of the signal; the other features sharpen the
 ranking rather than transform it.
 
-Gain importance shows where the lift comes from. `purchase_frequency_180d` and
-`days_since_last_purchase` tie at the top (about 87 each), then
-`purchase_frequency_30d` (41) and `avg_order_value` (31). Frequency buys the
-lift: it separates the lapsed-but-regular customer from the lapsed-and-fading
-one, which recency alone cannot. The bottom of the chart is the honest part.
-`customer_tenure_days`, `online_to_store_ratio` and `category_diversity_score`
-sit at 13 to 15, a sixth of the leaders; the kit's claim that the behavioural
-features "catch churners who still look active" is not what this dataset
-shows, and the ablation that would settle it (drop both, compare AUC) is the
-next experiment. `churn_risk_score` is decorative: adding it moved AUC to
-0.7787 and cut the best iteration from 115 to 12, a model leaning on a
-pre-computed recency rule instead of learning. It stays out.
+Gain importance shows where the lift comes from, but it needed a second
+opinion. `purchase_frequency_180d` and `days_since_last_purchase` tie at the top
+(about 87 gain each), with `category_diversity_score` and
+`online_to_store_ratio` near the bottom at 13 to 15. An ablation
+(`experiments/ablation.py`, same split and configuration) tells a different
+story: dropping `purchase_frequency_180d` costs 0.0005 AUC, because the 30-day
+and 90-day frequency columns carry the same information, while dropping the two
+behavioural features costs 0.0054, the largest loss of any subset tested, and
+more than the 0.0012 for `customer_tenure_days`. Gain rewards the feature the
+trees happened to split on first; it cannot see redundancy. So the real signal
+is recency plus frequency as a group, and the behavioural pair is modest but
+genuine, as the kit's comment claimed. `churn_risk_score` is decorative: adding
+it moved AUC to 0.7787 and cut the best iteration from 115 to 12, a model
+leaning on a pre-computed recency rule instead of learning. It stays out.
 
 ## LLM system
 
@@ -84,7 +85,7 @@ math in the prompt.
 
 ## With 10x the time or data
 
-Replace the single 70/15/15 split with time-based validation (train before a
+Replace the single stratified 70/30 split with time-based validation (train before a
 cutoff, validate on the next quarter) so the reported AUC is the one the
 retention team will see, and allocate the contact list per tier instead of at a
 global top-10% cutoff, which hands Bronze two thirds of the slots and leaves

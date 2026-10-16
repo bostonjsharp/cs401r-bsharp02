@@ -45,7 +45,7 @@ scripts/
   verify-lab1.sh / verify-lab2.sh   rubric checks
   teardown-lab2.sh       terraform destroy plus the six orphans destroy leaves behind
   collect_lab3_evidence.py / collect-lab3-evidence.sh   (Lab 3) exports and checks docs/lab3-evidence/
-  teardown-lab3.sh       (Lab 3) deletes the MLflow App, endpoints, training jobs; checks nothing bills
+  teardown-lab3.sh       (Lab 3) checks endpoints, training jobs, tracking servers are gone; keeps the free MLflow App
   check-secrets.sh       run before every commit
 docs/                    diagrams, ADR, cost estimate, apply/verify/destroy evidence
   lab3-evidence/         (Lab 3) the files the evidence collector checks (see below)

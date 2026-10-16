@@ -415,7 +415,8 @@ forbids both and restricts incentives to benefits present in the context.
       cases and mitigations (summary; detail in `track-b-examples.md`) | With 10x time
       or data. **2026-10-15: written from the local xgb-shallow numbers (HTML comment
       marks them for refresh after Phase 4); names the behavioural-feature ablation as
-      the next experiment.**
+      the next experiment.** Ablation run 2026-10-16 (`experiments/ablation.py`): behavioural
+      pair -0.0054 AUC, purchase_frequency_180d -0.0005, tenure -0.0012; doc updated.
 - [x] README: Lab 3 section covering how to train (local and the optional spot job),
       how to evaluate, where artifacts land (`artifacts/models/`, `artifacts/mlflow/`,
       `artifacts/athena-results/`, Model Registry group), how to run the harness and
@@ -428,6 +429,18 @@ forbids both and restricts incentives to benefits present in the context.
 ## Phase 4 - AWS session (**COSTS MONEY** - one sitting, same-day teardown)
 
 Ask before step 1. Expected wall clock 60-90 min; expected spend $1-2.
+
+**Status 2026-10-16 17:40: steps 1-9 done in one sitting (17:11-17:45).** Apply 53 resources
+in 3 min (`docs/lab3-apply-output.txt`); pipeline 3/3 SUCCEEDED, 9,999 rows
+(`docs/lab3-pipeline-output.txt`); offline store lagged ~4 min behind the Glue job before
+Athena saw rows (poll `features/offline-store/` for Parquet first); MLflow App
+`northstar-mlflow` arn `...mlflow-app/app-ARLX53NAWKLU` (`docs/lab3-mlflow-app-arn.txt`),
+Created in under 5 min; 4 runs (xgb-baseline 0.7818, xgb-shallow 0.7835, xgb-plus-risk
+0.7787, xgb-final 0.7835 registered as northstar-churn-models v1 PendingManualApproval);
+every number reproduced the local dry-run to 4 dp; collector 25 OK / 0 WARN / 0 FAIL first
+try; teardown-lab3 all OK; teardown-lab2 run (output copied to
+`docs/lab3-destroy-output.txt`, Lab 2's file restored from git). Report section 1 written
+from the exported files. Step 10 (commit, push) is Boston's.
 
 1. **[$] Re-deploy the Lab 2 stack.** `terraform plan -out=tfplan` in
    `infrastructure/environments/dev`, read the plan, then `terraform apply tfplan`

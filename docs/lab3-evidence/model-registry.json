@@ -1,0 +1,26 @@
+{
+  "ModelPackageGroupName": "northstar-churn-models",
+  "Versions": [
+    {
+      "ModelPackageArn": "arn:aws:sagemaker:us-east-1:829485866627:model-package/northstar-churn-models/1",
+      "ModelPackageVersion": 1,
+      "ModelApprovalStatus": "PendingManualApproval",
+      "CreationTime": "2026-10-16 17:27:51.527000-06:00",
+      "ModelPackageDescription": "NorthStar churn XGBoost 3.4.1, run xgb-final, AUC 0.7835 vs recency baseline 0.7225 (lift CI [0.0425, 0.0797]), P@10 0.7167, R@10 0.3258",
+      "CustomerMetadataProperties": {
+        "auc_roc": "0.7835",
+        "auc_vs_baseline": "0.061",
+        "baseline_auc": "0.7225",
+        "best_iteration": "115",
+        "lift_ci_high": "0.0797",
+        "lift_ci_low": "0.0425",
+        "n_features": "11",
+        "n_val_samples": "3000",
+        "precision_top10": "0.7167",
+        "recall_top10": "0.3258",
+        "threshold_top10": "0.6372",
+        "xgboost_version": "3.4.1"
+      }
+    }
+  ]
+}
