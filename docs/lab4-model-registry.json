@@ -1,0 +1,32 @@
+{
+    "ModelPackageSummaryList": [
+        {
+            "ModelPackageGroupName": "northstar-churn-models",
+            "ModelPackageVersion": 3,
+            "ModelPackageArn": "arn:aws:sagemaker:us-east-1:829485866627:model-package/northstar-churn-models/3",
+            "CreationTime": "2026-10-30T14:20:24.054000-06:00",
+            "ModelPackageStatus": "Completed",
+            "ModelApprovalStatus": "PendingManualApproval",
+            "ModelPackageRegistrationType": "Registered"
+        },
+        {
+            "ModelPackageGroupName": "northstar-churn-models",
+            "ModelPackageVersion": 2,
+            "ModelPackageArn": "arn:aws:sagemaker:us-east-1:829485866627:model-package/northstar-churn-models/2",
+            "CreationTime": "2026-10-30T14:09:10.947000-06:00",
+            "ModelPackageStatus": "Completed",
+            "ModelApprovalStatus": "Approved",
+            "ModelPackageRegistrationType": "Registered"
+        },
+        {
+            "ModelPackageGroupName": "northstar-churn-models",
+            "ModelPackageVersion": 1,
+            "ModelPackageArn": "arn:aws:sagemaker:us-east-1:829485866627:model-package/northstar-churn-models/1",
+            "ModelPackageDescription": "NorthStar churn XGBoost 3.4.1, run xgb-final, AUC 0.7835 vs recency baseline 0.7225 (lift CI [0.0425, 0.0797]), P@10 0.7167, R@10 0.3258",
+            "CreationTime": "2026-10-16T17:27:51.527000-06:00",
+            "ModelPackageStatus": "Completed",
+            "ModelApprovalStatus": "PendingManualApproval",
+            "ModelPackageRegistrationType": "Registered"
+        }
+    ]
+}

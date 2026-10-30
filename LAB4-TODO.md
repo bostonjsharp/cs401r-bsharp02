@@ -441,6 +441,33 @@ Contract (checked by `train_sagemaker.py` in the first seconds of the job):
       (expected: nothing; `boto3` is there).
 - [x] Commit everything so far (done 2026-10-30; push is Phase 4 step 4). Pushing is free and harmless until the CI stack exists.
 
+### Phase 4 done (2026-10-30, one sitting, ~2.5 h wall clock)
+
+- Steps 1-10 complete; evidence in `docs/lab4-*` (all captured before teardown and read).
+- Four CI runs (`docs/lab4-pipeline-runs.txt`): run 1 `0528508` FAILED at BUILD (training
+  succeeded on spot in 149 s; RegisterModel denied `sagemaker:CreateModelPackageGroup`,
+  which the SDK calls even when the group exists -> IAM fix `3ab859d`); run 2 `3ab859d`
+  green, registered v2, approved as champion; run 3 `c904258` the deliberate failure
+  (PRE_BUILD FAILED, no BUILD, alarm ALARM 14:14:43, email screenshot); run 4 `4ae6b78`
+  the revert = final green run (32/26/23 passed, `champion v2 auc=0.7848; candidate
+  auc=0.7848` line 744, fairness flag line 748, registered v3, alarm back to OK).
+- Spot capacity was granted immediately on every run (no E6 timeout). Each run ~5 min of
+  CodeBuild SMALL + ~1 min billable spot.
+- E1 grew: besides PassRole/CreateModelPackage/AddTags, MLEngineer also needed
+  `CreateModelPackageGroup` and the documented training-job logs/PutMetricData/ECR
+  actions. E2 confirmed by simulate (CodeBuild role, ListModelPackages on "*": allowed).
+  E3 confirmed (pre_build failure registered nothing). E4 did not bite. E8: the handout's
+  `save_log` fails on Windows because the AWS CLI itself writes cp1252; used a boto3
+  version (paginated) instead.
+- `aws iam simulate-principal-policy` cannot evaluate log-STREAM ARNs or
+  `cloudwatch:namespace` conditions (even `arn:aws:logs:*:*:*` reads implicitDeny);
+  judge those by the log-group form and the real run.
+- Lineage on v3 (`docs/lab4-model-package.json`): data URI + timestamp (event_time
+  2026-10-30T19:49:15Z), full SHA, training job, metrics.
+- Teardown 11.1-11.4 done (stack, artifacts bucket, log group, v2 -> Rejected, report
+  group). 11.5 `teardown-lab2.sh` run by hand (classifier blocks terraform destroy);
+  11.6 read-only checks -> `docs/lab4-teardown-output.txt`.
+
 ## Phase 4 - AWS session (**COSTS MONEY**: one or two sittings, same-day teardown)
 
 Ask before step 1. Expected wall clock: 3-4 hours spread over the runs (each pipeline run

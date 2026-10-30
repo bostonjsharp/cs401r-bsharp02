@@ -1,0 +1,28 @@
+==> Lab 2 pipeline
+    crawler   : northstar-dev-raw-crawler
+    transform : northstar-dev-transform
+    features  : northstar-dev-feature-engineer
+    workflow  : northstar-dev-pipeline
+
+[1/1] workflow run
+      run id wr_89953bde9a2f769d712b500b828d2db39a4acbdcb8b57b614ffa8d0e612c8703
+      workflow RUNNING      workflow RUNNING      workflow RUNNING      workflow RUNNING      workflow RUNNING      workflow RUNNING      workflow RUNNING      workflow RUNNING      workflow RUNNING      workflow RUNNING      workflow RUNNING      workflow RUNNING      workflow RUNNING      workflow RUNNING      workflow RUNNING      workflow RUNNING      workflow RUNNING      workflow RUNNING      workflow RUNNING      workflow COMPLETED
+---------------------------
+|     GetWorkflowRun      |
++--------------------+----+
+|  ErroredActions    |  0 |
+|  FailedActions     |  0 |
+|  RunningActions    |  0 |
+|  StoppedActions    |  0 |
+|  SucceededActions  |  3 |
+|  TimeoutActions    |  0 |
+|  TotalActions      |  3 |
+|  WaitingActions    |  0 |
++--------------------+----+
+      crawler finished: SUCCEEDED
+      northstar-dev-transform: SUCCEEDED
+      northstar-dev-feature-engineer: SUCCEEDED
+
+==> Feature group northstar-dev-customer-features: Created
+==> Done. Next: bash scripts/verify-lab2.sh | tee docs/lab2-verify-output.txt
+exit 0

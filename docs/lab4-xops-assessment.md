@@ -76,9 +76,13 @@ And one edit to our own Terraform (`infrastructure/modules/iam/main.tf`):
 the handout's prerequisite 4), may `CreateModelPackage` /
 `DescribeModelPackageGroup` on `northstar-churn-models` (the register step), and
 may `AddTags`/`ListTags` on training jobs, model packages and pipelines (a
-SageMaker Pipeline tags every job it creates). The kit assumes
-`AmazonSageMakerFullAccess`; our Lab 1 policy is least-privilege, so these were
-missing.
+SageMaker Pipeline tags every job it creates). Two more were found by running:
+`sagemaker:CreateModelPackageGroup`, which the SDK's RegisterModel step calls
+even when the group already exists (green run 1 trained successfully and failed
+only there, `docs/lab4-pipeline-runs.txt` build `3e2929b1`), and the training
+job's documented CloudWatch Logs / `PutMetricData` / ECR layer-check actions.
+The kit assumes `AmazonSageMakerFullAccess`; our Lab 1 policy is
+least-privilege, so these were missing.
 
 ---
 
@@ -184,9 +188,11 @@ automated quality gates on every change; 4 self-healing / governed at scale.
   all five rubric categories (raw/processed/feature schema, transaction vs
   customer grain, leakage via recomputation from rows <= T, distribution bands,
   48-hour freshness), run in `pre_build` before anything is trained;
-  `docs/lab4-build-green.log` shows them PASSED <!-- TODO Phase 4: cite the "32 passed" line number -->
-  and `docs/lab4-build-failed.log` shows the build halting at `PRE_BUILD` on a
-  single failing assertion.
+  `docs/lab4-build-green.log` shows them PASSED (line 356, `32 passed`; the
+  leakage/parity proof at line 346, the freshness test at line 350) and
+  `docs/lab4-build-failed.log` shows the build halting at `PRE_BUILD` on a
+  single failing assertion (lines 354-369, `1 failed, 32 passed`, then
+  `Phase complete: PRE_BUILD State: FAILED`).
 - The feature logic is unit-testable: `data/feature_engineering.py` is the
   pandas twin of `glue-scripts/feature_engineer.py`, pinned to it by the parity
   test (exact equality on 9,999 customers for the integer-valued features,
@@ -226,9 +232,10 @@ retraining and production monitoring; 4 governed, self-optimising.
 **Evidence:**
 - Reproducible training as code: `models/churn/churn_model.py` fixes the
   hyperparameters in one `PARAMS` dict (depth 3, eta 0.05, 400 rounds, early
-  stopping 20), stratified split with `random_state=42`; the local run and the
-  CI run reproduce Lab 3's AUC 0.7835 to four decimals
-  (`docs/lab3-evidence/evaluation_metrics.json` vs `docs/lab4-build-green.log` <!-- TODO Phase 4: cite the auc_roc line -->).
+  stopping 20), stratified split with `random_state=42`. The local run
+  reproduces Lab 3's AUC 0.7835 exactly (`docs/lab3-evidence/evaluation_metrics.json`);
+  the CI run on the container's XGBoost 1.7.4 lands at 0.7848
+  (`docs/lab4-build-green.log` line 549), the same model within version noise.
 - Experiment tracking: four runs with differing `max_depth`/`eta`/`feature_set`
   in the MLflow App (`docs/lab4-mlflow-runs.txt`, tracking URI an
   `mlflow-app` ARN).
@@ -245,8 +252,9 @@ retraining and production monitoring; 4 governed, self-optimising.
   package; `docs/lab4-model-registry.json` shows the Approved champion and the
   PendingManualApproval challenger side by side.
 - A written, numeric promotion rule (above) and a regression test that names
-  the champion it compared against (`champion vN auc=...` in the warnings
-  summary of `docs/lab4-build-green.log` <!-- TODO Phase 4: cite line -->).
+  the champion it compared against: `docs/lab4-build-green.log` line 744,
+  `champion v2 auc=0.7848; candidate auc=0.7848`, test PASSED at line 732; the
+  fairness flag (Bronze 0.446 vs Gold 0.135 recall) at line 748.
 
 **Gap to Level 3:** no model in production and therefore no production
 monitoring or automatic retraining: there is no endpoint (Lab 5), no Model
