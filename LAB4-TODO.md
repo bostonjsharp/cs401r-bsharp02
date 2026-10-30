@@ -146,6 +146,61 @@ Keep Phase 4 to one or two sittings.
 
 ---
 
+### Phase 0 done (2026-10-28, nothing committed yet)
+
+- Kit copied in (11 files, nothing overwritten). `.gitignore` ignores `data/processed/`,
+  `data/features/`, `data/northstar-raw-sample.csv`, `reports/`. `pytest` 9.2.0 in the venv.
+- E1 written in `infrastructure/modules/iam/main.tf`: `PassSelfToSageMaker` (handout verbatim),
+  `ModelRegistryWrite` (CreateModelPackage + DescribeModelPackageGroup on model-package(-group)
+  ARNs), `PipelineJobTags` (AddTags/ListTags on training-job, model-package(-group), pipeline).
+  `terraform validate` OK; plan = 53 add / 0 change / 0 destroy. Not applied.
+- `pipeline.yaml` decided and edited: E2 statement (`sagemaker:ListModelPackages`, `Resource "*"`)
+  added to the CodeBuild role; E5 `ComputeType: BUILD_GENERAL1_SMALL` (free tier's 100
+  build-min/month applies to SMALL only). `aws cloudformation validate-template` OK.
+- `pytest --collect-only tests/`: 44 tests collected; `test_features.py` errors at import on
+  the missing `data/feature_engineering.py`, which is Phase 1a.
+- `buildspec.yml` contract the tests see: pre_build sets `NORTHSTAR_RAW=./data/northstar-raw-sample.csv`,
+  `NORTHSTAR_PROCESSED=./data/processed`, `NORTHSTAR_FEATURES=./data/features` and runs
+  `test_data.py` then `test_features.py` (`--junitxml=reports/*.xml`); build runs
+  `test_model.py` + `test_fairness.py` (only if the file exists) with `-v -rw`,
+  `--eval-metrics-path /tmp/eval_metrics.json --model-path /tmp/model/xgboost-model`;
+  `conftest.py` maps `--eval-metrics-path` onto `EVAL_METRICS_PATH`. Metrics live at
+  `artifacts/evaluations/<8-char sha>/evaluation_metrics.json` with `model_metadata.json` beside it.
+
+### Phases 1-3 done (2026-10-30, committed; not pushed)
+
+- `data/feature_engineering.py` (330 lines): pandas twin of the Glue job. Parity on the
+  9,999-customer dry run is **exact** for all integer-valued features, tier, proxy score
+  and label; `avg_order_value` differs by exactly 1e-4 on 103 customers (8-order means
+  land on an exact half at the 5th decimal and Spark's partition summation order
+  decides the tie). Rounding is Spark-style HALF_UP (`round_half_up`); the parity
+  test allows `atol=1e-4` on the six rounded columns, exact elsewhere.
+- Tests: `test_data.py` 32 (parity x3, label-from-holdout, freshness x2 added),
+  `test_features.py` 25 (both TODOs filled, 8 named edge cases), `test_model.py` 19
+  (champion regression added; `eval_metrics` + `candidate_metrics` are module-scoped
+  fixtures to avoid pytest 9's class-scoped-method deprecation in the graded log),
+  `test_fairness.py` 4 (new). Local: **80 passed, 1 failed** = `test_features_are_fresh`
+  on the 18-day-old dry run (expected, E11).
+- `models/churn/churn_model.py` (361 lines): Lab 3 functions copied, `PARAMS` = xgb-shallow.
+  Local `train_sagemaker.py` run on `.dryrun/features` reproduces Lab 3 exactly
+  (AUC 0.7835, P@10 0.7167, R@10 0.3258, CI [0.0425, 0.0797]); `model_dir` holds only
+  `xgboost-model`. **Container check done** in `python:3.8-slim` + xgboost 1.7.6 /
+  pandas 1.5.3 / sklearn 1.3.2: runs clean, AUC 0.7848, P@10 0.7300, R@10 0.3318,
+  CI [0.0452, 0.0838] (all gates pass); the 1.7 artifact loads under xgboost 3.4.1 and
+  passes all 23 model + fairness tests. `-rw` summary shows the fairness flag
+  (Bronze 0.45 vs Gold 0.12) and "no Approved champion ... vacuous".
+- E4 did not bite: the dollar-scaled synthetic batch passes all discrimination tests.
+- `docs/lab4-xops-assessment.md` written: mapping, champion-challenger (C1-C4),
+  both triggers, maturity drafts. Three `<!-- TODO Phase 4 -->` markers want line
+  numbers from `docs/lab4-build-green.log` (Phase 4 step 12).
+- README "Lab 4: CI/CD and testing" section added. `requirements.txt`: nothing to add.
+- **`docs/lab4-mlflow-runs.txt` moved to Phase 4 step 3**: the App's execution role is
+  `northstar-dev-MLEngineer`, destroyed with the Lab 2 stack, so `search_runs` returns
+  `PERMISSION_DENIED` until `terraform apply` recreates it (same name = same ARN).
+  Script is in the Phase 3 bullet; run it right after the apply.
+- Windows note: Git Bash heredocs containing certain non-ASCII text failed to parse;
+  edit scripts were run from files instead. Keep new test/doc text ASCII.
+
 ## Phase 0 - Setup (FREE)
 
 Starter kit placement (mirror the kit's own layout; nothing existing is overwritten):
@@ -162,14 +217,14 @@ Starter kit placement (mirror the kit's own layout; nothing existing is overwrit
 | `models/churn/churn_model.py` | `models/churn/` | we write `train()` |
 | (ours) | `tests/test_fairness.py`, `data/feature_engineering.py`, `docs/lab4-*` | new |
 
-- [ ] Copy the kit in (above). `git status` should show only new files.
-- [ ] `.gitignore`: add `data/processed/`, `data/features/`, `data/northstar-raw-sample.csv`
+- [x] Copy the kit in (above). `git status` should show only new files.
+- [x] `.gitignore`: add `data/processed/`, `data/features/`, `data/northstar-raw-sample.csv`
       (the buildspec stages them there in CI; locally we point `NORTHSTAR_*` at `.dryrun/`),
       `reports/` (junit xml). **Do not** ignore `data/` wholesale: `data/feature_engineering.py`
       must be committed or every CI run fails at import. Keep the `*.tfvars` / `.env` lines.
-- [ ] `pip install pytest` in the venv. Nothing else is missing; verify with
+- [x] `pip install pytest` in the venv. Nothing else is missing; verify with
       `python -c "import pytest, xgboost, pandas, sklearn, boto3, pyarrow"`.
-- [ ] Terraform (E1), written now, applied in Phase 4 step 1. In
+- [x] Terraform (E1), written now, applied in Phase 4 step 1. In
       `infrastructure/modules/iam/main.tf`, MLEngineer policy:
       1. the handout's `PassSelfToSageMaker` statement (`iam:PassRole` on
          `aws_iam_role.ml_engineer.arn`, condition `iam:PassedToService = sagemaker.amazonaws.com`);
@@ -178,14 +233,17 @@ Starter kit placement (mirror the kit's own layout; nothing existing is overwrit
       3. a second `AddTags`/`ListTags` statement for `training-job/*`, `model-package/*`,
          `model-package-group/*`, `pipeline/*` (keep the Studio one as is);
       4. leave out anything simulate-principal-policy does not ask for.
-      `terraform validate` and `terraform plan` against remote state are free
-      (plan should show "1 to change", nothing else).
-- [ ] Decide `pipeline.yaml` edits (free; redeploying later costs nothing extra):
+      `terraform validate` and `terraform plan` against remote state are free.
+      Done 2026-10-28: plan shows **53 to add, 0 to change** (the stack is torn down, so
+      the edited policy is one of the adds; its JSON reads "known after apply" because it
+      references the role ARN). The statements are verified by reading `main.tf` now and
+      by `simulate-principal-policy` in Phase 4 step 3.
+- [x] Decide `pipeline.yaml` edits (free; redeploying later costs nothing extra):
       - E2: add a statement `sagemaker:ListModelPackages` with `Resource: "*"` to the
         CodeBuild role. Decide now, confirm with simulate in Phase 4.
       - E5 (optional): `ComputeType: BUILD_GENERAL1_SMALL`. 3 GB RAM is enough for pip +
         pytest on 157k rows. Document the change in the stage-mapping section.
-- [ ] Read `buildspec.yml` end to end once (the handout says so, and it is where every
+- [x] Read `buildspec.yml` end to end once (the handout says so, and it is where every
       environment variable and path the tests see is defined: `NORTHSTAR_RAW`,
       `NORTHSTAR_PROCESSED`, `NORTHSTAR_FEATURES`, `EVAL_METRICS_PATH`, `--model-path`).
 
@@ -205,7 +263,7 @@ Pure-pandas port of `glue-scripts/feature_engineer.py`. The kit imports exactly 
 `compute_recency_features(txns, snapshot_date[, customer_ids])`,
 `compute_frequency_features(txns, snapshot_date)`, `compute_monetary_features(txns, snapshot_date)`,
 `compute_behavioral_features(txns)`, `build_churn_feature_set(customers=, transactions=, snapshot_date=)`.
-- [ ] Reproduce the Glue semantics **exactly** (the parity test in 1b compares against the
+- [x] Reproduce the Glue semantics **exactly** (the parity test in 1b compares against the
       Glue output on 9,999 customers): window membership is `age < N` where
       `age = (T - purchase_date).days` on **dates** (Spark `datediff`), not timestamps;
       `avg_basket_size_6m` = sum(num_items in 180d) / orders in 180d, 0.0 when no orders;
@@ -214,48 +272,48 @@ Pure-pandas port of `glue-scripts/feature_engineer.py`. The kit imports exactly 
       `total_lifetime_value` over all history; six columns rounded to 4 dp
       (`avg_order_value`, `total_lifetime_value`, `total_spend_90d`, `avg_basket_size_6m`,
       `category_diversity_score`, `online_to_store_ratio`); tier thresholds 500/2000/5000.
-- [ ] Parse `purchase_date` with `pd.to_datetime` (the kit fixture passes ISO strings;
+- [x] Parse `purchase_date` with `pd.to_datetime` (the kit fixture passes ISO strings;
       Glue output is a date type).
-- [ ] Boundary: the kit's sentinel TODO passes an empty transaction frame (3 columns only)
+- [x] Boundary: the kit's sentinel TODO passes an empty transaction frame (3 columns only)
       plus a `customer_ids` frame and expects `days_since_last_purchase == 999`. Add an
       optional `customer_ids` argument and a sentinel constant.
-- [ ] Document in the module docstring that the Glue job stays PySpark and this module is
+- [x] Document in the module docstring that the Glue job stays PySpark and this module is
       the **testable twin**, kept honest by the parity test (not by import: Glue cannot
       import it without `--extra-py-files`, and the point is to gate on it).
-- [ ] No `data/__init__.py` needed (namespace package + `pythonpath = .`), but adding one
+- [x] No `data/__init__.py` needed (namespace package + `pythonpath = .`), but adding one
       is harmless; pick one and note it in the README.
 
 ### 1b. `tests/test_data.py` (rubric: schema, grain, leakage, distribution, freshness)
 Kit already covers schema (raw/processed/features), grain, nulls, tiers, bounded features,
 monotonic windows, trivial-separability leakage smoke test, observation window, consistency.
-- [ ] **Leakage/parity TODO**: from `processed_df` rows with `purchase_date <= 2026-04-01`,
+- [x] **Leakage/parity TODO**: from `processed_df` rows with `purchase_date <= 2026-04-01`,
       recompute recency, tenure and the 30/90/180-day frequencies with 1a's functions and
       assert equality with `features_df` for every customer (merge on `customer_id`; exact
       for the integer-valued ones, `atol=1e-4` for the rounded ones if included). This is
       the test that forces 1a to be exact. Runs on 157k rows in CI; keep it vectorised.
-- [ ] **Freshness TODO**: `features_df["event_time"]` is Fractional epoch seconds (float);
+- [x] **Freshness TODO**: `features_df["event_time"]` is Fractional epoch seconds (float);
       assert `now - max(event_time) < 48 h` and that `event_time` is **not** the cutoff.
       Locally this fails on the stale dry run unless re-run (E11); that is expected, note it
       in the test's failure message.
-- [ ] Both must FAIL loudly on missing data (inherit the `_require` behaviour; no new skips).
-- [ ] Count: the rubric wants >= 2 PASSED per file; the kit's file has ~25. Fine.
+- [x] Both must FAIL loudly on missing data (inherit the `_require` behaviour; no new skips).
+- [x] Count: the rubric wants >= 2 PASSED per file; the kit's file has ~25. Fine.
 
 ### 1c. `tests/test_features.py` (rubric: >= 5 unit tests; normal, boundary, edge)
 Kit already has 17 tests across recency/frequency/monetary/behavioural/full-set.
-- [ ] Fill the two TODOs: `test_customer_with_no_transactions_returns_sentinel` (boundary,
+- [x] Fill the two TODOs: `test_customer_with_no_transactions_returns_sentinel` (boundary,
       0 purchases, currently a vacuous `pass`) and `test_no_null_features_for_known_customers`
       (assert `null_counts.sum() == 0`, document the null strategy in the docstring).
-- [ ] Add explicit edge cases the handout names, with readable names (the TA reads the
+- [x] Add explicit edge cases the handout names, with readable names (the TA reads the
       names): single transaction (recency = tenure, frequency 1, basket = that order's
       items, diversity 1/8), a customer whose only purchase is older than 180 days (basket
       0.0, frequencies 0), an 'unknown' category excluded from diversity, boundary at
       exactly `age == 90` (excluded by `age < 90`).
-- [ ] Everything must pass without touching the Glue image.
+- [x] Everything must pass without touching the Glue image.
 
 ### 1d. `tests/test_model.py` additions (rubric: regression vs champion, 8 pts)
 Kit already covers loading, 11-feature count, metadata, probability range, NaN handling,
 monotonicity, determinism, the stored-metrics gate (P@10, R@10, lift CI), positive rate.
-- [ ] **Regression test**: champion = newest package in `northstar-churn-models` with
+- [x] **Regression test**: champion = newest package in `northstar-churn-models` with
       `ModelApprovalStatus == "Approved"` (boto3 `list_model_packages`, sort by creation
       time desc; E2 for permissions). Champion AUC from the package's
       `ModelMetrics.ModelQuality.Statistics.S3Uri` (`evaluation_metrics.json`, key `auc_roc`)
@@ -264,30 +322,30 @@ monotonicity, determinism, the stored-metrics gate (P@10, R@10, lift CI), positi
       `warnings.warn(f"champion v{version} auc={champ_auc:.4f}; candidate auc={new_auc:.4f}")`
       **before** `assert new_auc >= champ_auc - 0.02`. The buildspec runs with `-rw`, so the
       warning lands in the build log's warnings summary (graded evidence).
-- [ ] No Approved package yet (first green run only): warn
+- [x] No Approved package yet (first green run only): warn
       `"no Approved champion in northstar-churn-models; regression gate vacuous"` and pass.
       The **final** green run must show this test PASSED with the champion line, never
       SKIPPED. Do not `pytest.skip` here.
-- [ ] Region/account: `boto3.client("sagemaker", region_name=os.environ.get("AWS_REGION", "us-east-1"))`.
-- [ ] Locally: runs against the real registry with our admin credentials (free API calls);
+- [x] Region/account: `boto3.client("sagemaker", region_name=os.environ.get("AWS_REGION", "us-east-1"))`.
+- [x] Locally: runs against the real registry with our admin credentials (free API calls);
       with the stack down it sees v1 (not Approved) and takes the vacuous path. Fine.
 
 ### 1e. `tests/test_fairness.py` (new; rubric: flag, don't block; >= 2 tests)
 Manual slice evaluation (no SageMaker Clarify: it would need a processing job, i.e. money).
 Reads the same `EVAL_METRICS_PATH`; `train()` (Phase 2) puts per-tier results there as
 `tier_<tier>_n`, `tier_<tier>_positives`, `tier_<tier>_auc`, `tier_<tier>_recall`.
-- [ ] Test 1: all four tiers present with `n > 0` and a numeric recall (a model whose
+- [x] Test 1: all four tiers present with `n > 0` and a numeric recall (a model whose
       metrics lost the slices is not reviewable).
-- [ ] Test 2: recall gap between highest and lowest tier; if > 10 pp,
+- [x] Test 2: recall gap between highest and lowest tier; if > 10 pp,
       `warnings.warn("FAIRNESS FLAG: recall gap ...")` and **still pass**. Expect it to fire:
       Lab 3 measured Bronze 0.4515 vs Gold 0.1154. The flag must be visible in
       `docs/lab4-build-green.log`'s warnings summary.
-- [ ] Test 3 (cheap, useful): too-small tiers (n < 100 or positives < 10) are reported, not
+- [x] Test 3 (cheap, useful): too-small tiers (n < 100 or positives < 10) are reported, not
       judged, mirroring `evaluate_slices`.
-- [ ] Missing metrics file = FAIL, not skip (same principle as test_data).
+- [x] Missing metrics file = FAIL, not skip (same principle as test_data).
 
 ### 1f. Local run of the whole suite
-- [ ] `pytest tests/ -v -rw` with the env vars above: everything green except the freshness
+- [x] `pytest tests/ -v -rw` with the env vars above: everything green except the freshness
       test on the stale dry run and the model tests (no model yet; they skip until Phase 2
       provides `--model-path`). Re-run the Docker dry run (free, ~5 min) if a fully green
       local log is wanted:
@@ -299,7 +357,7 @@ Contract (checked by `train_sagemaker.py` in the first seconds of the job):
 `FEATURE_COLUMNS` (kit order, identical to the skeleton's), `LABEL = "churn_label"`,
 `train(df, seed=42) -> (xgboost.Booster, dict)` with `precision_top10`, `recall_top10`,
 `lift_ci_low`, `lift_ci_high` in the dict.
-- [ ] Copy (not import) from `churn_training_skeleton.py`, in call order:
+- [x] Copy (not import) from `churn_training_skeleton.py`, in call order:
       `preprocess_features` (drop `customer_id`, `event_time`, `churn_risk_score`; NaN
       passthrough; label to int; tiers as a Series), the split
       `train_test_split(X, y, tiers, test_size=0.30, random_state=seed, stratify=y)`,
@@ -310,19 +368,19 @@ Contract (checked by `train_sagemaker.py` in the first seconds of the job):
       (a failed gate fails the training step, so nothing is registered), `evaluate_slices`
       flattened into `tier_<tier>_*` keys (plus the per-tier list under `slice_results` if
       wanted; JSON-serialisable only).
-- [ ] Container constraints: Python 3.8 syntax only (no `match`, no `X | Y` outside
+- [x] Container constraints: Python 3.8 syntax only (no `match`, no `X | Y` outside
       annotations, no `str.removeprefix`, no `functools.cache`), keep
       `from __future__ import annotations`; pandas 1.x API only; pass
       `df["loyalty_tier"]` as a Series (kit note: `.values` is an Arrow array under pandas 3);
       no `mlflow`, `sagemaker`, `argparse`, `boto3` imports at module top; plain-ASCII
       prints only (no box-drawing characters in a container whose locale is unknown).
-- [ ] Train with a **named** DMatrix (`feature_names=FEATURE_COLUMNS`) so `xgboost-model`
+- [x] Train with a **named** DMatrix (`feature_names=FEATURE_COLUMNS`) so `xgboost-model`
       carries feature names; the tests build `DMatrix(..., feature_names=FEATURE_COLUMNS)`
       and XGBoost validates them.
-- [ ] Hyperparameters in one `PARAMS` dict at the top of the file, not literals inside
+- [x] Hyperparameters in one `PARAMS` dict at the top of the file, not literals inside
       `train()`, so the stage-mapping doc can quote it and the metadata's `hyperparameters`
       (read back from the booster by `train_sagemaker.py`) matches.
-- [ ] Local end-to-end (the handout's prerequisite-3 test, but on the dry run):
+- [x] Local end-to-end (the handout's prerequisite-3 test, but on the dry run):
       ```bash
       python models/churn/train_sagemaker.py --train-channel .dryrun/features \
         --model-dir /tmp/model --output-data-dir /tmp/out
@@ -333,16 +391,16 @@ Contract (checked by `train_sagemaker.py` in the first seconds of the job):
       Expect AUC ~0.7835, P@10 ~0.72, R@10 ~0.33, CI [~0.04, ~0.08] on xgboost 3.4.1 (the
       container's 1.7 will differ slightly; both pass every gate per the handout). Expect the
       fairness warning and the "no Approved champion" warning in the `-rw` summary.
-- [ ] Confirm `/tmp/model` holds **only** `xgboost-model` (Lab 5 serving container
+- [x] Confirm `/tmp/model` holds **only** `xgboost-model` (Lab 5 serving container
       enumerates that directory) and `/tmp/out` holds `model.ubj`, `evaluation_metrics.json`,
       `model_metadata.json`.
-- [ ] Optional, free, strongly suggested: run the same local command inside
+- [x] Optional, free, strongly suggested: run the same local command inside
       `python:3.8` in Docker with `pip install xgboost==1.7.6 pandas==1.5.3 scikit-learn pyarrow`
       to see exactly what the container will see (syntax and API), before paying for a run.
 
 ## Phase 3 - Docs that need no AWS (FREE)
 
-- [ ] `docs/lab4-xops-assessment.md` with the five exact headings the TA greps for:
+- [x] `docs/lab4-xops-assessment.md` with the five exact headings the TA greps for:
       `## Pipeline Stage Mapping` (five phases -> three CodePipeline stages, table lifted
       from the kit plus where each phase runs in `buildspec.yml`, why one CodeBuild project
       and not five stages, where registration sits relative to the gate and how post_build's
@@ -366,7 +424,7 @@ Contract (checked by `train_sagemaker.py` in the first seconds of the job):
       drift detection on served predictions (Lab 6)").
       Write the mapping, criterion and triggers now; finish the maturity text after Phase 4
       so it can cite measured lines.
-- [ ] `docs/lab4-mlflow-runs.txt` from the existing App, no stack required (E7):
+- [ ] (DEFERRED to Phase 4 step 3: App role is destroyed with the stack) `docs/lab4-mlflow-runs.txt` from the existing App (E7):
       ```python
       mlflow.set_tracking_uri("arn:aws:sagemaker:us-east-1:829485866627:mlflow-app/app-ARLX53NAWKLU")
       runs = mlflow.search_runs(experiment_names=["northstar-churn"])
@@ -375,13 +433,13 @@ Contract (checked by `train_sagemaker.py` in the first seconds of the job):
       the file shows the ARN as `tracking_uri`, >= 3 rows, `params.max_depth`/`params.eta`/
       `params.feature_set` differing, `metrics.*` filled. Optional screenshot
       `docs/lab4-mlflow-compare.png` (extra support only).
-- [ ] README: a "Lab 4: CI/CD" section (layout entries for `tests/`, `data/`, `models/churn/`,
+- [x] README: a "Lab 4: CI/CD" section (layout entries for `tests/`, `data/`, `models/churn/`,
       `buildspec.yml`, `pipeline.yaml`; how to run the suite locally with the `NORTHSTAR_*`
       vars; the local training check; what `docs/lab4-*` contains; the prerequisites list
       in our words with our names filled in).
-- [ ] `requirements.txt`: add anything the new tests import that the kit's list lacks
+- [x] `requirements.txt`: add anything the new tests import that the kit's list lacks
       (expected: nothing; `boto3` is there).
-- [ ] Commit everything so far. Pushing is free and harmless until the CI stack exists.
+- [x] Commit everything so far (done 2026-10-30; push is Phase 4 step 4). Pushing is free and harmless until the CI stack exists.
 
 ## Phase 4 - AWS session (**COSTS MONEY**: one or two sittings, same-day teardown)
 
@@ -407,6 +465,9 @@ Tags: **[$]** bills, **[free]** API calls only, **[by hand]** Boston does it in 
      the "AWS Connector for GitHub" app on `bostonjsharp`, grant it `cs401r-bsharp02` ->
      Connect. `list-connections` must say `AVAILABLE`. Keep the ARN.
    - Spot quota: `aws service-quotas get-service-quota --service-code sagemaker --quota-code L-29688C85` >= 1.
+   - **MLflow export (moved from Phase 3)**: now that `northstar-dev-MLEngineer` exists again,
+     run the Phase 3 snippet (experiment `northstar-churn`, App ARN in `docs/lab3-mlflow-app-arn.txt`)
+     to write `docs/lab4-mlflow-runs.txt`; check >= 3 rows, params differ, tracking_uri is the App ARN.
    - `ROLE=$(terraform -chdir=infrastructure/environments/dev output -raw ml_engineer_role_arn)`;
      `aws iam simulate-principal-policy --policy-source-arn $ROLE` for `iam:PassRole` (on the
      role ARN), `sagemaker:CreateTrainingJob` + `sagemaker:AddTags` (on

@@ -21,3 +21,10 @@ evaluation_results/
 *.faiss
 *.xgb
 rag/index/
+
+# Lab 4 (buildspec.yml stages data here in CI; locally NORTHSTAR_* point at .dryrun/)
+# Never ignore data/ wholesale: data/feature_engineering.py must be committed.
+data/processed/
+data/features/
+data/northstar-raw-sample.csv
+reports/

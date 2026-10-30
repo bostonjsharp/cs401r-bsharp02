@@ -13,6 +13,11 @@
 # console flags it as an unknown action, but course staff asked that the
 # policy stay as specified (the IAM API accepts the string; it simply grants
 # nothing until a matching action exists).
+# Lab 4 adds three statements (PassSelfToSageMaker, ModelRegistryWrite,
+# PipelineJobTags): the SageMaker Pipeline runs *as* this role, hands it to the
+# training job (iam:PassRole), tags every job it creates, and registers the
+# model package itself. Reference accounts have AmazonSageMakerFullAccess
+# masking all of this; our least-privilege policy must grant it explicitly.
 
 locals {
   name_prefix = "${var.project}-${var.environment}"
@@ -82,6 +87,44 @@ resource "aws_iam_policy" "ml_engineer" {
         Resource = [
           "arn:aws:sagemaker:*:*:domain/*", "arn:aws:sagemaker:*:*:user-profile/*",
           "arn:aws:sagemaker:*:*:space/*", "arn:aws:sagemaker:*:*:app/*",
+        ]
+      },
+      {
+        # Lab 4 handout, prerequisite 4 (verbatim). The SageMaker Pipeline
+        # executes as MLEngineer and starts a training job that is handed the
+        # same role; without this every run fails ~30 s in with
+        # "not authorized to perform: iam:PassRole on resource: .../MLEngineer".
+        Sid       = "PassSelfToSageMaker"
+        Effect    = "Allow"
+        Action    = ["iam:PassRole"]
+        Resource  = aws_iam_role.ml_engineer.arn
+        Condition = { StringEquals = { "iam:PassedToService" = "sagemaker.amazonaws.com" } }
+      },
+      {
+        # Lab 4: the pipeline's RegisterModel step calls CreateModelPackage
+        # (the real action; `sagemaker:RegisterModel` above is not one) and
+        # describes the group first. Scoped to registry resource types only.
+        Sid    = "ModelRegistryWrite"
+        Effect = "Allow"
+        Action = ["sagemaker:CreateModelPackage", "sagemaker:DescribeModelPackageGroup"]
+        Resource = [
+          "arn:aws:sagemaker:*:*:model-package/*",
+          "arn:aws:sagemaker:*:*:model-package-group/*",
+        ]
+      },
+      {
+        # Lab 4: SageMaker Pipelines tag every job and package they create.
+        # The Studio statement above scopes AddTags to Studio ARNs only, so
+        # the training step would fail with AccessDenied on AddTags. Kept as
+        # a separate statement so the Studio one stays exactly as Lab 1 left it.
+        Sid    = "PipelineJobTags"
+        Effect = "Allow"
+        Action = ["sagemaker:AddTags", "sagemaker:ListTags"]
+        Resource = [
+          "arn:aws:sagemaker:*:*:training-job/*",
+          "arn:aws:sagemaker:*:*:model-package/*",
+          "arn:aws:sagemaker:*:*:model-package-group/*",
+          "arn:aws:sagemaker:*:*:pipeline/*",
         ]
       },
       {

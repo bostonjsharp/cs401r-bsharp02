@@ -39,6 +39,11 @@ evaluation_harness.py       (Lab 3) kit's RAGAS harness; its Track B hook is wir
 rag/                        (Lab 3) Track B offer generator: corpus.py, index.py, retrieve.py,
                             generate.py, pipeline.py, run_eval.py, prompts/
 notebooks/lab3-demo.ipynb   (Lab 3) end-to-end demo, committed with outputs
+data/feature_engineering.py (Lab 4) pandas twin of glue-scripts/feature_engineer.py; what the tests exercise
+models/churn/                (Lab 4) churn_model.py (our train()), train_sagemaker.py + pipeline_definition.py (kit, unedited)
+tests/                       (Lab 4) test_data.py, test_features.py, test_model.py, test_fairness.py, conftest.py
+buildspec.yml / pipeline.yaml (Lab 4) CodeBuild phases and the CodePipeline/CodeBuild/SNS/alarm stack
+requirements.txt / pytest.ini (Lab 4) CodeBuild's install list; pythonpath=. so `pytest tests/` imports data/
 scripts/
   bootstrap-state.sh     one-time remote state setup
   run-lab2-pipeline.sh   runs crawler -> transform -> feature-engineer using terraform outputs
@@ -260,6 +265,82 @@ rubric names: `train-final.log`, `evaluation_metrics.json`,
 `rag_eval.csv`, `rag_eval_strategies.csv`, `track-b-examples.md`, plus the
 collector's exports (`account.json`, `athena-query.json`, `mlflow-app.json`,
 `mlflow-runs.csv`, `model-registry.json`, `collect-output.txt`).
+
+## Lab 4: CI/CD and testing
+
+A push to `main` runs CodePipeline `northstar-pipeline`: Source (GitHub via
+CodeConnections) -> Build (one CodeBuild project, `buildspec.yml`) -> ManualApproval.
+The build's `pre_build` runs the data and feature tests against the Lab 2 bucket,
+`build` upserts and runs the SageMaker Pipeline `northstar-churn-pipeline`
+(spot `ml.m5.large`, our `models/churn/churn_model.py`), registers the model as
+`PendingManualApproval`, then runs the model gate and fairness tests against the
+real artifact. A red build registers nothing approvable; the alarm
+`northstar-ci-build-failure` emails the `northstar-model-approvals` topic.
+The stage mapping, promotion rule, retraining triggers and maturity assessment
+are in `docs/lab4-xops-assessment.md`.
+
+### Run the test suite locally (free)
+
+The tests read the same three datasets CodeBuild stages into `data/`; locally
+point them at the Docker dry run (`glue-scripts/local_dry_run.py`):
+
+```bash
+source .venv/Scripts/activate
+export NORTHSTAR_RAW=./northstar-raw-sample.csv
+export NORTHSTAR_PROCESSED=./.dryrun/processed
+export NORTHSTAR_FEATURES=./.dryrun/features
+pytest tests/test_data.py tests/test_features.py -v
+```
+
+Everything passes except `test_features_are_fresh` when `.dryrun/` is older than
+48 hours; that is the test doing its job (re-run the dry run to clear it).
+`data/feature_engineering.py` is the pandas port of the Glue feature job; the
+parity tests in `tests/test_data.py` recompute every feature from `processed/`
+rows on or before the cutoff and compare with what the job wrote, so the two
+cannot drift apart silently. Never set `ALLOW_MISSING_DATA` or
+`ALLOW_MISSING_FEATURES_MODULE` where CI can see them.
+
+### Local training check (what the pipeline runs, free)
+
+```bash
+python models/churn/train_sagemaker.py --train-channel .dryrun/features \
+    --model-dir /tmp/model --output-data-dir /tmp/out
+cp /tmp/out/model_metadata.json /tmp/model/
+pytest tests/test_model.py tests/test_fairness.py -v -rw \
+    --model-path /tmp/model/xgboost-model --eval-metrics-path /tmp/out/evaluation_metrics.json
+```
+
+Expect AUC 0.7835, precision@10 0.7167, recall@10 0.3258, lift CI [0.0425, 0.0797]
+(the Lab 3 numbers; the XGBoost 1.7 container differs in the last digits). The
+`-rw` summary shows the `FAIRNESS FLAG` (Bronze vs Gold recall) and the champion
+line of the regression test. To see exactly what the training container sees,
+run the same command inside `python:3.8-slim` with
+`pip install xgboost==1.7.6 pandas==1.5.3 'scikit-learn<1.4' pyarrow`.
+
+### Prerequisites for the pipeline (AWS, bills while up)
+
+1. Lab 2 stack applied (`terraform apply` in `infrastructure/environments/dev`;
+   includes the Lab 4 IAM additions to `northstar-dev-MLEngineer`) and
+   `scripts/run-lab2-pipeline.sh` run so `features/customers/` is < 48 h old.
+2. Versioned artifacts bucket `northstar-dev-cicd-artifacts-<account>`.
+3. A CodeConnections connection `northstar-github` authorised in the console.
+4. `aws cloudformation deploy --template-file pipeline.yaml --stack-name northstar-cicd ...`
+   with the parameters listed at the top of `pipeline.yaml`; subscribe an email
+   to the `ModelApprovalTopicArn` output and confirm it.
+
+Each push costs about $0.10-0.15 (CodeBuild SMALL minutes + a few spot
+training minutes). Delete the stack before docs-only pushes.
+
+### Lab 4 evidence (`docs/lab4-*`)
+
+| File | What it shows |
+|---|---|
+| `lab4-xops-assessment.md` | stage mapping, champion-challenger rule, retraining triggers, DataOps/MLOps maturity |
+| `lab4-pipeline-runs.txt` | every CodePipeline execution, CodeBuild build (phases + pytest summaries) and SageMaker Pipeline execution |
+| `lab4-build-green.log` | the final green build: all four test files PASSED, champion warning, fairness flag, `Pipeline succeeded`, `Registered: arn:...` |
+| `lab4-failure-demo.txt`, `lab4-build-failed.log`, `lab4-alarm-email.png` | BEFORE / AFTER FAILED RUN / AFTER REVERT snapshots, the `PRE_BUILD` failure, the alarm email |
+| `lab4-model-registry.json`, `lab4-model-package.json` | Approved champion + PendingManualApproval challenger; lineage metadata on the final package |
+| `lab4-mlflow-runs.txt` | the Lab 3 MLflow App runs (tracking URI = App ARN) |
 
 ## Evidence
 
