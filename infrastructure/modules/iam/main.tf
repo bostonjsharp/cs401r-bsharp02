@@ -106,7 +106,10 @@ resource "aws_iam_policy" "ml_engineer" {
         # describes the group first. Scoped to registry resource types only.
         Sid    = "ModelRegistryWrite"
         Effect = "Allow"
-        Action = ["sagemaker:CreateModelPackage", "sagemaker:DescribeModelPackageGroup"]
+        Action = ["sagemaker:CreateModelPackage",
+          # Lab 4, seen on green run 1: the SDK RegisterModel step calls
+          # CreateModelPackageGroup even when the group exists (idempotent create).
+        "sagemaker:CreateModelPackageGroup", "sagemaker:DescribeModelPackageGroup"]
         Resource = [
           "arn:aws:sagemaker:*:*:model-package/*",
           "arn:aws:sagemaker:*:*:model-package-group/*",
