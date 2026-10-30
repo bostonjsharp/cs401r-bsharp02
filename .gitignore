@@ -28,3 +28,6 @@ data/processed/
 data/features/
 data/northstar-raw-sample.csv
 reports/
+
+# Terraform saved plans (binary, may embed values)
+tfplan

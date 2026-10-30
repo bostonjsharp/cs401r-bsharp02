@@ -146,15 +146,36 @@ resource "aws_iam_policy" "ml_engineer" {
         Resource = local.data_bucket_arn
       },
       {
-        Sid      = "CloudWatchLogs"
-        Effect   = "Allow"
-        Action   = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents"]
-        Resource = "arn:aws:logs:*:*:log-group:/aws/sagemaker/*"
+        # Lab 4: the training job's CloudWatch permissions, as documented for
+        # the CreateTrainingJob execution role. PutLogEvents is evaluated on a
+        # log-STREAM ARN, so the log-group pattern alone reads implicitDeny in
+        # simulate-principal-policy; DescribeLogStreams is also on the list.
+        Sid    = "CloudWatchLogs"
+        Effect = "Allow"
+        Action = ["logs:CreateLogGroup", "logs:CreateLogStream", "logs:PutLogEvents",
+        "logs:DescribeLogStreams"]
+        Resource = [
+          "arn:aws:logs:*:*:log-group:/aws/sagemaker/*",
+          "arn:aws:logs:*:*:log-group:/aws/sagemaker/*:log-stream:*",
+        ]
       },
       {
-        Sid      = "ECRRead"
+        # Lab 4: training-job algorithm metrics. PutMetricData accepts only
+        # Resource "*"; the namespace condition keeps it to SageMaker's own.
+        Sid      = "TrainingJobMetrics"
         Effect   = "Allow"
-        Action   = ["ecr:GetDownloadUrlForLayer", "ecr:BatchGetImage", "ecr:GetAuthorizationToken"]
+        Action   = ["cloudwatch:PutMetricData"]
+        Resource = "*"
+        Condition = {
+          StringLike = { "cloudwatch:namespace" = ["/aws/sagemaker/*", "aws/sagemaker/*"] }
+        }
+      },
+      {
+        # BatchCheckLayerAvailability: Lab 4, pulled by the training container runtime.
+        Sid    = "ECRRead"
+        Effect = "Allow"
+        Action = ["ecr:GetDownloadUrlForLayer", "ecr:BatchGetImage", "ecr:GetAuthorizationToken",
+        "ecr:BatchCheckLayerAvailability"]
         Resource = "*"
       },
     ]
