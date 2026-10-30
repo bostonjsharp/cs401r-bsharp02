@@ -169,55 +169,42 @@ has run out of road.
 
 ## DataOps Maturity
 
-Levels used (course chapter): 0 ad hoc / manual; 1 scripted and repeatable;
-2 automated pipeline with tests and contracts; 3 continuous, monitored, with
-automated quality gates on every change; 4 self-healing / governed at scale.
+Levels used (course chapter): 0 ad hoc; 1 scripted and repeatable; 2 automated
+pipeline with tests and contracts; 3 continuous, monitored, quality-gated on
+every change; 4 self-healing and governed at scale.
 
-**Current level: 2** (automated, tested, contracted; not yet continuously monitored).
+**Current level: 2**
 
-**Evidence:**
-- Pipeline as code: `infrastructure/modules/glue/main.tf` defines the crawler,
-  `northstar-dev-transform`, `northstar-dev-feature-engineer` and the workflow
-  `northstar-dev-pipeline` whose `CONDITIONAL` triggers chain them;
-  `scripts/run-lab2-pipeline.sh` runs it end to end, reproducibly (157,627
-  processed rows on every run since Lab 2).
-- Data contract with measurable guarantees: `docs/lab2-data-contract.md`
-  (schema, grain, nine quality guarantees, SLA, versioning); lineage with owners
-  on every edge in `docs/lab2-data-lineage.png`.
-- Tests enforced in CI on every push: `tests/test_data.py` holds 32 tests over
-  all five rubric categories (raw/processed/feature schema, transaction vs
-  customer grain, leakage via recomputation from rows <= T, distribution bands,
-  48-hour freshness), run in `pre_build` before anything is trained;
-  `docs/lab4-build-green.log` shows them PASSED (line 356, `32 passed`; the
-  leakage/parity proof at line 346, the freshness test at line 350) and
-  `docs/lab4-build-failed.log` shows the build halting at `PRE_BUILD` on a
-  single failing assertion (lines 354-369, `1 failed, 32 passed`, then
-  `Phase complete: PRE_BUILD State: FAILED`).
-- The feature logic is unit-testable: `data/feature_engineering.py` is the
-  pandas twin of `glue-scripts/feature_engineer.py`, pinned to it by the parity
-  test (exact equality on 9,999 customers for the integer-valued features,
-  1e-4 on the rounded ones), with 25 feature unit tests in `tests/test_features.py`.
-- Governed storage: one versioned, encrypted bucket with lifecycle rules
-  (`infrastructure/modules/storage`), least-privilege `DataEngineer` role, and a
-  Feature Store (`infrastructure/modules/feature_store`) with 16 typed definitions.
+**Evidence:** The pipeline is code: `infrastructure/modules/glue/main.tf`
+defines the crawler, `northstar-dev-transform`, `northstar-dev-feature-engineer`
+and the workflow `northstar-dev-pipeline` that chains them with `CONDITIONAL`
+triggers, run end to end by `scripts/run-lab2-pipeline.sh` (157,627 processed
+rows, every run since Lab 2). The data has a contract, `docs/lab2-data-contract.md`
+(schema, grain, nine quality guarantees, SLA), and lineage with owners on every
+edge, `docs/lab2-data-lineage.png`. The contract is enforced on every push:
+`tests/test_data.py` holds 32 tests across schema, grain, leakage, distribution
+and freshness, run in CodeBuild `pre_build` before anything trains;
+`docs/lab4-build-green.log` line 356 shows `32 passed`, the leakage proof at
+line 346 and the 48-hour freshness check at line 350, and
+`docs/lab4-build-failed.log` lines 354-369 show one failing assertion ending
+the build at `PRE_BUILD`. The feature logic itself is unit-testable:
+`data/feature_engineering.py` is the pandas twin of the Glue job, pinned to it
+by a parity test over all 9,999 customers.
 
-**Gap to Level 3:** no continuous data quality monitoring between pipeline
-runs. Quality is checked only when a push happens (pre_build) or when a human
-runs the workflow; nothing watches `raw/` for schema or volume changes, no
-Glue Data Quality ruleset runs inside the workflow, and a feature set that
-silently drifts (for example `online_to_store_ratio` collapsing after a store
-closure) is caught only by the 48-hour freshness test, which measures age, not
-content. The contract's SLA (`docs/lab2-data-contract.md` section "SLA") is
-asserted by nothing.
+**Gap to Level 3:** no continuous data-quality monitoring between pushes.
+Quality is checked only when code changes or a human runs the workflow;
+nothing watches `raw/` for schema or volume changes, no Glue Data Quality
+ruleset runs inside the workflow, and a feature set that silently drifts (for
+example `online_to_store_ratio` collapsing after a store closure) passes the
+freshness test, which measures age, not content. The SLA in
+`docs/lab2-data-contract.md` is asserted by nothing.
 
-**Top priority investment:** add an **AWS Glue Data Quality** ruleset
-(DQDL) to the `northstar-dev-transform` job, generated from
-`docs/lab2-data-contract.md` (`RowCount > 140000`, `IsComplete "customer_id"`,
-`IsUnique "transaction_id"`, `ColumnValues "channel" in ["store","online","unknown"]`,
-`Completeness "order_value" = 1.0`), with the job failing the workflow on a
-rule failure and publishing the `glue.data.quality` metrics to CloudWatch for an
-alarm. That turns the contract into a gate that runs on every data refresh, not
-only on code pushes.
+**Top priority investment:** an **AWS Glue Data Quality** ruleset (DQDL)
+attached to `northstar-dev-transform`, generated from the contract
+(`RowCount > 140000`, `IsComplete "customer_id"`, `IsUnique "transaction_id"`,
+`ColumnValues "channel" in ["store","online","unknown"]`), failing the workflow
+on a rule miss and publishing `glue.data.quality` metrics to a CloudWatch alarm.
+That makes the contract a gate on every data refresh, not only on code pushes.
 
 ---
 
@@ -225,49 +212,39 @@ only on code pushes.
 
 Levels used: 0 manual notebook training; 1 scripted, tracked, reproducible
 training; 2 CI/CD-automated training with gated registration; 3 automated
-retraining and production monitoring; 4 governed, self-optimising.
+retraining and production monitoring; 4 governed and self-optimising.
 
-**Current level: 2** (automated training pipeline with promotion gates; retraining and monitoring designed, not deployed).
+**Current level: 2**
 
-**Evidence:**
-- Reproducible training as code: `models/churn/churn_model.py` fixes the
-  hyperparameters in one `PARAMS` dict (depth 3, eta 0.05, 400 rounds, early
-  stopping 20), stratified split with `random_state=42`. The local run
-  reproduces Lab 3's AUC 0.7835 exactly (`docs/lab3-evidence/evaluation_metrics.json`);
-  the CI run on the container's XGBoost 1.7.4 lands at 0.7848
-  (`docs/lab4-build-green.log` line 549), the same model within version noise.
-- Experiment tracking: four runs with differing `max_depth`/`eta`/`feature_set`
-  in the MLflow App (`docs/lab4-mlflow-runs.txt`, tracking URI an
-  `mlflow-app` ARN).
-- CI/CD with enforced gates: `buildspec.yml` and `pipeline.yaml`; every push
-  trains on spot in a SageMaker Pipeline (`models/churn/pipeline_definition.py`)
-  and registers `PendingManualApproval`; the gates in `tests/test_model.py`
-  (precision@10, recall@10, lift CI, champion regression) and the
-  flag-not-block slice checks in `tests/test_fairness.py` run against the real
-  artifact; `docs/lab4-pipeline-runs.txt` shows SUCCEEDED builds through
-  `POST_BUILD`, and `docs/lab4-failure-demo.txt` shows a red build registering
-  nothing and the alarm delivering an email.
-- Registry with lineage: `docs/lab4-model-package.json` carries the training
-  data URI and timestamp, the full commit SHA and the metrics on the final
-  package; `docs/lab4-model-registry.json` shows the Approved champion and the
-  PendingManualApproval challenger side by side.
-- A written, numeric promotion rule (above) and a regression test that names
-  the champion it compared against: `docs/lab4-build-green.log` line 744,
-  `champion v2 auc=0.7848; candidate auc=0.7848`, test PASSED at line 732; the
-  fairness flag (Bronze 0.446 vs Gold 0.135 recall) at line 748.
+**Evidence:** Training is reproducible code: `models/churn/churn_model.py`
+fixes the hyperparameters in one `PARAMS` dict and the split seed; the local run
+reproduces Lab 3's AUC 0.7835 exactly (`docs/lab3-evidence/evaluation_metrics.json`)
+and the CI run on the container's XGBoost 1.7.4 lands at 0.7848
+(`docs/lab4-build-green.log` line 549). Experiments are tracked: four runs with
+differing `max_depth`, `eta` and `feature_set` in the MLflow App
+(`docs/lab4-mlflow-runs.txt`). Every push trains on spot in a SageMaker
+Pipeline (`models/churn/pipeline_definition.py`, driven by `buildspec.yml` and
+`pipeline.yaml`), registers `PendingManualApproval`, and must pass the gates in
+`tests/test_model.py` against the real artifact: `docs/lab4-build-green.log`
+line 744 names the champion it beat (`champion v2 auc=0.7848; candidate
+auc=0.7848`) and line 748 carries the fairness flag from `tests/test_fairness.py`.
+A red build registers nothing and notifies: `docs/lab4-failure-demo.txt` shows
+the same newest version before and after the failed run, the alarm going
+OK -> ALARM, and a confirmed subscriber (`docs/lab4-alarm-email.png`). The
+registry carries lineage: `docs/lab4-model-package.json` has the data URI and
+timestamp, the full commit SHA and the metrics on the final package.
 
-**Gap to Level 3:** no model in production and therefore no production
-monitoring or automatic retraining: there is no endpoint (Lab 5), no Model
-Monitor data capture or drift baseline (Lab 6), the `ProductionAUC` metric
-that trigger (b) alarms on is not published by anything yet, and the weekly
-EventBridge schedule in trigger (a) is designed, not deployed. Promotion is
-still a human running `update-model-package`; the Champion-Challenger rule is
-applied by eye, not by code.
+**Gap to Level 3:** nothing is in production, so there is no production
+monitoring and no automatic retraining: no endpoint (Lab 5), no Model Monitor
+data capture or drift baseline (Lab 6), the `ProductionAUC` metric that trigger
+(b) alarms on is published by nothing, and the weekly EventBridge schedule in
+trigger (a) is designed, not deployed. Promotion is a human running
+`update-model-package`; the Champion-Challenger rule is applied by eye.
 
 **Top priority investment:** deploy the champion to a SageMaker real-time
-endpoint with **Model Monitor data capture** and a `DataQuality` baseline
-built from `features/customers/` (Lab 5/6), and wire the `Deploy` stage of
-`pipeline.yaml` to a Lambda that applies the Champion-Challenger rule from the
-two `evaluation_metrics.json` files. That one change makes both retraining
+endpoint with **Model Monitor data capture** and a `DataQuality` baseline built
+from `features/customers/` (Labs 5-6), and put a Lambda behind the `Deploy`
+stage of `pipeline.yaml` that applies the Champion-Challenger rule from the two
+`evaluation_metrics.json` files. That single change makes both retraining
 triggers live and removes the last manual step between a green build and a
 served model.

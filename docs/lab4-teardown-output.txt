@@ -1,0 +1,28 @@
+===== Lab 4 teardown verification (2026-10-30T20:32:51Z), account 829485866627, us-east-1 =====
+--- NAT gateways (available/pending):
+--- VPCs tagged northstar:
+--- SageMaker endpoints:
+--- SageMaker MLflow tracking servers (must be none; the App is free):
+--- SageMaker MLflow apps (kept, free):
+northstar-mlflow	Created
+--- SageMaker domains:
+--- Training jobs in progress:
+--- Feature groups:
+--- SageMaker pipelines (definition only, free):
+northstar-churn-pipeline
+--- Model packages northstar-churn-models (no Approved):
+3	PendingManualApproval
+2	Rejected
+1	PendingManualApproval
+--- CodeBuild projects:
+--- CodePipelines:
+--- CloudFormation stacks (active):
+--- CloudWatch alarms:
+--- SNS topics:
+--- Glue jobs:
+--- S3 buckets:
+northstar-tfstate-829485866627	sagemaker-studio-9tucqiyzp5t	sagemaker-us-east-1-829485866627
+--- CodeConnections (kept, free):
+northstar-github	AVAILABLE
+--- EFS filesystems:
+--- CloudWatch log groups (northstar / codebuild / sagemaker):

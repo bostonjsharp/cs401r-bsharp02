@@ -174,7 +174,10 @@ for c in $(aws sagemaker list-contexts --query 'ContextSummaries[*].ContextName'
   [ -z "${c}" ] && continue
   aws sagemaker delete-context --context-name "${c}" >/dev/null 2>&1 && echo "      deleted context ${c}"
 done
-remaining=$(( $(aws sagemaker list-contexts --query 'length(ContextSummaries)' --output text 2>/dev/null || echo 0)             + $(aws sagemaker list-artifacts --query 'length(ArtifactSummaries)' --output text 2>/dev/null || echo 0) ))
+# length() is evaluated per API page, so with more than 10 entities the CLI
+# prints one number per page ("10\n2") and the arithmetic died with a syntax
+# error (Lab 4 teardown, 2026-10-30). Sum the pages instead.
+remaining=$(( $(aws sagemaker list-contexts --query 'length(ContextSummaries)' --output text 2>/dev/null | awk '{s+=$1} END {print s+0}') + $(aws sagemaker list-artifacts --query 'length(ArtifactSummaries)' --output text 2>/dev/null | awk '{s+=$1} END {print s+0}') ))
 [ "${remaining}" = "0" ] && break
 echo "      ${remaining} lineage entities still present, retrying in 20s (attempt ${attempt}/4)"
 sleep 20

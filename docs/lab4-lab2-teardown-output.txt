@@ -1,0 +1,40 @@
+==> Lab 2 teardown
+    Account : 829485866627
+    Region  : us-east-1
+    Bucket  : northstar-dev-data-829485866627
+
+{
+    "BucketArn": "arn:aws:s3:::northstar-dev-data-829485866627",
+    "BucketRegion": "us-east-1",
+    "AccessPointAlias": false
+}
+[1/7] Emptying northstar-dev-data-829485866627 (all versions and delete markers)
+      removed 114 Versions
+[2/7] Removing Feature Store Glue catalog database
+      deleted sagemaker_featurestore
+[2b/7] Removing orphaned Glue network interfaces
+[3/7] terraform destroy
+[0m[1mmodule.vpc.aws_security_group.this: Destruction complete after 0s[0m
+[0m[1mmodule.vpc.aws_vpc.this: Destroying... [id=vpc-07a54c4ece4629d8f][0m[0m
+[0m[1mmodule.vpc.aws_vpc.this: Destruction complete after 1s[0m
+[0m[1m[32m
+Destroy complete! Resources: 46 destroyed.[0m
+[4/7] Removing orphaned SageMaker Studio EFS filesystems
+[5/7] Removing orphaned ENIs and SageMaker NFS security groups
+[6/7] Removing orphaned SageMaker lineage contexts and artifacts
+scripts/teardown-lab2.sh: line 177: 7             + 10
+2 : syntax error: invalid arithmetic operator (error token is "
+2 ")
+[7/7] Verifying teardown
+      NAT gateways           OK
+      Elastic IPs            OK
+      SageMaker domains      OK
+      Feature groups         OK
+      EFS filesystems        OK
+      Glue jobs              OK
+      NorthStar VPCs         OK
+      Lineage contexts       STILL PRESENT: 7
+      Lineage artifacts      STILL PRESENT: 12
+      Glue databases         OK
+
+==> WARNING: resources above are still present and may be billing.
