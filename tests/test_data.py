@@ -437,18 +437,3 @@ class TestConsistency:
             f"Only {survival:.1%} of raw rows survived to processed. Expected "
             f"85-100%; the transform should remove only null-key and duplicate rows."
         )
-
-
-# -- Lab 4 Task 2 failure demonstration -----------------------------------------
-#
-# DELIBERATE. This assertion exists to prove the pipeline halts in the phase
-# that owns the tests (pre_build), registers nothing, and raises the
-# northstar-ci-build-failure alarm. It is reverted in the next commit; both
-# commits stay in main history as evidence (docs/lab4-failure-demo.txt).
-
-def test_deliberate_ci_failure_demo():
-    assert False, (
-        "DELIBERATE CI FAILURE DEMO (Lab 4 Task 2): this test is meant to fail. "
-        "Expected outcome: build FAILED at PRE_BUILD, no BUILD phase, no new model "
-        "package, alarm northstar-ci-build-failure -> ALARM. Reverted in the next commit."
-    )
