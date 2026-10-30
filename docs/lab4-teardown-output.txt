@@ -26,3 +26,14 @@ northstar-tfstate-829485866627	sagemaker-studio-9tucqiyzp5t	sagemaker-us-east-1-
 northstar-github	AVAILABLE
 --- EFS filesystems:
 --- CloudWatch log groups (northstar / codebuild / sagemaker):
+
+--- SageMaker lineage entities (teardown-lab2.sh step 7 reports 7 contexts / 12 artifacts "STILL PRESENT"):
+Listed 2026-10-30T20:50Z. These are lineage-tracking metadata, which SageMaker does not bill
+(no storage or compute behind them). They fall in two groups:
+  * kept on purpose: the ModelGroup context for northstar-churn-models and the Model / ModelData /
+    Image / DataSet artifacts of packages v1-v3 (the registry lineage graded in this lab; the
+    package group is retained across labs per the handout).
+  * orphans: six FeatureGroup / FeatureGroupPipeline / FeatureGroupPipelineVersion contexts left
+    behind by DeleteFeatureGroup (Lab 2 run 2026-10-16 and Lab 4 run 2026-10-30). DeleteContext
+    returns "Cannot delete entity with associations"; the script only unwinds associations where
+    the context is the destination, so the ones it is the source of survive. Free, so left alone.

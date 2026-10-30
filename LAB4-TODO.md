@@ -467,6 +467,11 @@ Contract (checked by `train_sagemaker.py` in the first seconds of the job):
 - Teardown 11.1-11.4 done (stack, artifacts bucket, log group, v2 -> Rejected, report
   group). 11.5 `teardown-lab2.sh` run by hand (classifier blocks terraform destroy);
   11.6 read-only checks -> `docs/lab4-teardown-output.txt`.
+- `teardown-lab2.sh` step 7 still reports 7 lineage contexts / 12 artifacts. Not billable:
+  the model-registry lineage we keep (ModelGroup context, v1-v3 Model artifacts) plus six
+  orphan FeatureGroup contexts that refuse DeleteContext ("Cannot delete entity with
+  associations"; the script unwinds destination-side associations only). Documented in
+  `docs/lab4-teardown-output.txt`; also fixed the script's per-page `length()` count bug.
 
 ## Phase 4 - AWS session (**COSTS MONEY**: one or two sittings, same-day teardown)
 
