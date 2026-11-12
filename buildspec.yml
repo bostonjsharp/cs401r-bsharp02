@@ -109,16 +109,14 @@ phases:
       # the build phase instead, against the real metrics.
 
       # ── Security Scan ──────────────────────────────────────────────────
-      # TODO: Uncomment after Lab 5 (security hardening)
-      # - bandit -r . -ll --exclude ./tests -f json -o reports/security_scan.json
-      # - cat reports/security_scan.json | python -c "
-      #     import json, sys
-      #     report = json.load(sys.stdin)
-      #     highs = [r for r in report['results'] if r['issue_severity'] == 'HIGH']
-      #     if highs:
-      #         print(f'SECURITY: {len(highs)} HIGH severity issues found')
-      #         sys.exit(1)
-      #   "
+      # Lab 5. bandit exits non-zero on any finding at the reported level, and
+      # -lll reports HIGH severity only, so a HIGH finding fails pre_build and
+      # nothing is trained or registered. The template's commented multi-line
+      # block is NOT used (its "if highs" line parses as a YAML mapping key and
+      # CodeBuild rejects the whole file); these three lines replace it.
+      - echo "Running security scan"
+      - pip install --quiet bandit
+      - bandit -r models data -lll
 
       - echo "All pre-build tests passed ✓"
 

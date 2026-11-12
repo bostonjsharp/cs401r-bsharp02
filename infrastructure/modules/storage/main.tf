@@ -87,9 +87,12 @@ locals {
     expire-raw-versions       = { prefix = "raw/", current_days = null, noncurrent_days = 30 }
     expire-processed-versions = { prefix = "processed/", current_days = null, noncurrent_days = 30 }
     expire-feature-versions   = { prefix = "features/", current_days = null, noncurrent_days = 60 }
-    # Nothing writes datacapture/ until Lab 5; the retention exists before
-    # the writer does.
-    expire-datacapture = { prefix = "datacapture/", current_days = 7, noncurrent_days = null }
+    # Lab 5: the endpoint's DataCaptureConfig writes here (raw inference
+    # inputs and outputs). The bucket is versioned, so expiry alone only adds
+    # a delete marker and the payload lives on as a noncurrent version;
+    # noncurrent_days = 1 is what actually removes it (Lab 5 prerequisite 6).
+    # Both halves live in this ONE rule: verify-lab2.sh expects five rules.
+    expire-datacapture = { prefix = "datacapture/", current_days = 7, noncurrent_days = 1 }
   }
 }
 

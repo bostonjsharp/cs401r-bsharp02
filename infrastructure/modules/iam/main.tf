@@ -18,6 +18,8 @@
 # training job (iam:PassRole), tags every job it creates, and registers the
 # model package itself. Reference accounts have AmazonSageMakerFullAccess
 # masking all of this; our least-privilege policy must grant it explicitly.
+# Lab 5 adds one statement (S3DataCaptureWrite): the real-time endpoint also
+# runs as this role and writes its data capture records to datacapture/.
 
 locals {
   name_prefix = "${var.project}-${var.environment}"
@@ -141,6 +143,18 @@ resource "aws_iam_policy" "ml_engineer" {
           "${local.data_bucket_arn}/artifacts/*",
           "${local.data_bucket_arn}/features/*",
         ]
+      },
+      {
+        # Lab 5 handout, prerequisite 5. The endpoint executes as this role
+        # and its DataCaptureConfig writes request/response records under
+        # datacapture/. Without this the failure is SILENT: the endpoint is
+        # InService and answers every call, and nothing is ever written.
+        # Write-only on purpose (no Get/Delete): the serving container has no
+        # reason to read captured payloads back; Lab 6 monitoring reads them.
+        Sid      = "S3DataCaptureWrite"
+        Effect   = "Allow"
+        Action   = ["s3:PutObject", "s3:AbortMultipartUpload"]
+        Resource = "${local.data_bucket_arn}/datacapture/*"
       },
       {
         Sid      = "S3BucketList"
