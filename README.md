@@ -44,6 +44,7 @@ models/churn/                (Lab 4) churn_model.py (our train()), train_sagemak
 tests/                       (Lab 4) test_data.py, test_features.py, test_model.py, test_fairness.py, conftest.py
 buildspec.yml / pipeline.yaml (Lab 4) CodeBuild phases and the CodePipeline/CodeBuild/SNS/alarm stack
 requirements.txt / pytest.ini (Lab 4) CodeBuild's install list; pythonpath=. so `pytest tests/` imports data/
+deployment/                  (Lab 5) deploy-canary.sh and configs/: endpoint config, scaling, rollback alarm + action, sample payload
 scripts/
   bootstrap-state.sh     one-time remote state setup
   run-lab2-pipeline.sh   runs crawler -> transform -> feature-engineer using terraform outputs
@@ -51,6 +52,7 @@ scripts/
   teardown-lab2.sh       terraform destroy plus the six orphans destroy leaves behind
   collect_lab3_evidence.py / collect-lab3-evidence.sh   (Lab 3) exports and checks docs/lab3-evidence/
   teardown-lab3.sh       (Lab 3) checks endpoints, training jobs, tracking servers are gone; keeps the free MLflow App
+  teardown-lab5.sh       (Lab 5) deletes scaling, rollback alarm, endpoints, configs, models; writes docs/lab5-teardown-output.txt
   check-secrets.sh       run before every commit
 docs/                    diagrams, ADR, cost estimate, apply/verify/destroy evidence
   lab3-evidence/         (Lab 3) the files the evidence collector checks (see below)
@@ -341,6 +343,53 @@ training minutes). Delete the stack before docs-only pushes.
 | `lab4-failure-demo.txt`, `lab4-build-failed.log`, `lab4-alarm-email.png` | BEFORE / AFTER FAILED RUN / AFTER REVERT snapshots, the `PRE_BUILD` failure, the alarm email |
 | `lab4-model-registry.json`, `lab4-model-package.json` | Approved champion + PendingManualApproval challenger; lineage metadata on the final package |
 | `lab4-mlflow-runs.txt` | the Lab 3 MLflow App runs (tracking URI = App ARN) |
+
+## Lab 5: deployment and security
+
+The churn model is released as a **9:1 canary on one real-time endpoint**,
+`northstar-churn-prod`: variant `champion` (the Approved package now serving)
+and variant `canary` (the newer Approved package), both `ml.m5.large`, with
+data capture to `datacapture/` for Lab 6. Nothing is created in the console;
+every resource is a file in `deployment/configs/` passed to the CLI with
+`--cli-input-json`.
+
+| File | What it is |
+|---|---|
+| `deployment/deploy-canary.sh` | Sequences the deployment: checks both packages are Approved and their artifacts exist, creates the two models, the endpoint config and the endpoint, then attaches scaling and the alarm |
+| `deployment/configs/endpoint-config-canary.json` | Two production variants, weights 9 and 1, `DataCaptureConfig` on |
+| `deployment/configs/scalable-target.json`, `scaling-policy.json` | Target tracking on `SageMakerVariantInvocationsPerInstance` = 1000, cooldowns 60 s out / 600 s in |
+| `deployment/configs/rollback-alarm.json` | Rollback trigger: canary `ModelLatency` p95 > 200000 microseconds (200 ms), 3 x 60 s |
+| `deployment/configs/rollback-action.sh` | Rollback action: canary weight 0, champion weight 1 |
+| `deployment/configs/sample.csv` | One header-less row of the 11 `FEATURE_COLUMNS`, the payload used to invoke |
+
+### Deploy, roll back, tear down (AWS, bills while up)
+
+The endpoint costs **$0.23/hour from InService until it is deleted**. Rolling
+back does not stop the charge. The full procedure, with the approval step and
+the rollback criteria, is `docs/lab5-deployment-plan.md`.
+
+```bash
+# prerequisites: Lab 2 stack applied, features fresh, two Approved packages
+bash deployment/deploy-canary.sh <champion-package-arn> <canary-package-arn>
+
+# smoke-test one variant directly
+aws sagemaker-runtime invoke-endpoint --endpoint-name northstar-churn-prod   --content-type text/csv --target-variant canary   --body fileb://deployment/configs/sample.csv out.txt && cat out.txt
+
+bash deployment/configs/rollback-action.sh   # canary to weight 0, ~90 s
+bash scripts/teardown-lab5.sh                # deletes everything; writes the gate file
+```
+
+The CI build (`buildspec.yml`, `pre_build`) now also runs a security scan,
+`bandit -r models data -lll`, and stops before training on any HIGH finding.
+
+### Lab 5 documents and evidence (`docs/lab5-*`)
+
+| File | What it shows |
+|---|---|
+| `lab5-deployment-plan.md` | the seven-section runbook: strategy, checklist and approval, rollback criteria, monitoring window (48 h in production, 60 min in the lab), notifications, review, cleanup |
+| `lab5-security-assessment.md` | STRIDE threat model against the three IAM roles, seven-asset data classification, privacy impact assessment with the erasure workflow |
+| `lab5-deployment-output.txt` | captured while live: registry approvals, both variants and weights, scaling, alarm state, observed split, split after rollback, post-teardown counts (written during the AWS session) |
+| `lab5-teardown-output.txt` | written by `scripts/teardown-lab5.sh`; six lines ending `OK` (written during the AWS session) |
 
 ## Evidence
 

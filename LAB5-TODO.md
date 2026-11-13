@@ -167,7 +167,7 @@ descriptions ASCII. Model names are fixed now and created in Phase 3:
 `northstar-churn-v4` (champion), `northstar-churn-v5` (canary). If CI registers different
 version numbers, rename in the JSON before creating anything.
 
-- [ ] `deployment/configs/endpoint-config-canary.json` (`create-endpoint-config`):
+- [x] `deployment/configs/endpoint-config-canary.json` (`create-endpoint-config`):
       `EndpointConfigName` `northstar-churn-canary`; `ProductionVariants`:
       `champion` -> `northstar-churn-v4`, `canary` -> `northstar-churn-v5`, each
       `InstanceType` `ml.m5.large`, `InitialInstanceCount` 1, `InitialVariantWeight` 9 and 1;
@@ -175,38 +175,43 @@ version numbers, rename in the JSON before creating anything.
       `DestinationS3Uri` `s3://northstar-dev-data-829485866627/datacapture/`,
       `CaptureOptions` Input and Output, `CaptureContentTypeHeader.CsvContentTypes`
       `["text/csv"]`. Endpoint configs are immutable: capture cannot be added later.
-- [ ] `deployment/configs/rollback-alarm.json` (`put-metric-alarm`): `AlarmName`
+- [x] `deployment/configs/rollback-alarm.json` (`put-metric-alarm`): `AlarmName`
       `northstar-churn-rollback-latency` (D8); `Namespace` `AWS/SageMaker`; `MetricName`
       `ModelLatency`; `Dimensions` `EndpointName=northstar-churn-prod`, `VariantName=canary`;
       `ExtendedStatistic` `p95` (the capture block queries `ExtendedStatistic`); `Period` 60;
       `EvaluationPeriods` 3; `Threshold` **200000**; `ComparisonOperator`
       `GreaterThanThreshold`; `TreatMissingData` `notBreaching`. The number, statistic and
       period here are the ones the plan's section 3 must quote exactly.
-- [ ] `deployment/configs/scalable-target.json` (`register-scalable-target`):
+- [x] `deployment/configs/scalable-target.json` (`register-scalable-target`):
       `ServiceNamespace` `sagemaker`; `ResourceId`
       `endpoint/northstar-churn-prod/variant/champion`; `ScalableDimension`
       `sagemaker:variant:DesiredInstanceCount`; `MinCapacity` 1; `MaxCapacity` 2.
-- [ ] `deployment/configs/scaling-policy.json` (`put-scaling-policy`): `PolicyName`
+- [x] `deployment/configs/scaling-policy.json` (`put-scaling-policy`): `PolicyName`
       `northstar-churn-invocations-tt`; same namespace / resource / dimension; `PolicyType`
       `TargetTrackingScaling`; `TargetValue` 1000.0; `PredefinedMetricType`
       `SageMakerVariantInvocationsPerInstance`; `ScaleOutCooldown` 60; `ScaleInCooldown` 600.
-- [ ] `deployment/configs/rollback-action.sh`: `aws sagemaker
+- [x] `deployment/configs/rollback-action.sh`: `aws sagemaker
       update-endpoint-weights-and-capacities --endpoint-name northstar-churn-prod
       --desired-weights-and-capacities VariantName=champion,DesiredWeight=1
       VariantName=canary,DesiredWeight=0`, then `aws sagemaker wait endpoint-in-service`.
       Header comment: does not stop billing; takes ~90 s; endpoint keeps serving.
-- [ ] `deployment/deploy-canary.sh` (ours; makes the plan executable by a stranger and keeps
+- [x] `deployment/deploy-canary.sh` (ours; makes the plan executable by a stranger and keeps
       the plan under 900 words): resolves `ROLE` from `terraform output -raw
       ml_engineer_role_arn`, takes the two package ARNs as arguments, runs `create-model`
       twice (`--containers ModelPackageName=<arn>`), `create-endpoint-config` from the JSON,
       `create-endpoint`, `wait endpoint-in-service`, then registers the scalable target,
       puts the scaling policy and puts the alarm, each from its JSON. `set -euo pipefail`;
       refuses to run if either package is not `Approved`.
-- [ ] Shape check without AWS cost: `python -m json.tool` on each JSON; compare keys against
+- [x] Shape check without AWS cost: `python -m json.tool` on each JSON; compare keys against
       `aws sagemaker create-endpoint-config --generate-cli-skeleton` (and the three others).
       `grep '"Threshold"' deployment/configs/rollback-alarm.json` shows 200000.
 
 ## Phase 2 - Documents that need no AWS (FREE; Tasks 2, 3, 4)
+
+Status 2026-11-12: Phases 1 and 2 written and checked offline (JSON validated against the
+botocore API models, `bash -n` on both scripts, plan at 859 words including the empty
+execution-record table). Measured values are still `TBD` in the plan's last table; filling
+them adds roughly 20 words, so keep the plan under 900. Not committed yet.
 
 Draft now, fill measured numbers (latency, observed split, timings, version numbers) after
 Phase 3.
@@ -215,34 +220,34 @@ Phase 3.
 `wc -w` counts code blocks, so reference `deployment/deploy-canary.sh`,
 `deployment/configs/rollback-action.sh` and `scripts/teardown-lab5.sh` instead of inlining
 long commands. Seven numbered sections, in the handout's order (the rubric cites them by number):
-- [ ] **1. Deployment strategy and rationale.** Real-time canary. Justify from NorthStar's
+- [x] **1. Deployment strategy and rationale.** Real-time canary. Justify from NorthStar's
       scoring-frequency requirement (read `northstar-scenario-overview.md` for what the
       business actually asks for; cite it), not generic latency/throughput talk. Say why not
       batch and why canary over blue/green for this system.
-- [ ] **2. Pre-deployment checklist.** Includes the approval step: which **role** approves
+- [x] **2. Pre-deployment checklist.** Includes the approval step: which **role** approves
       (e.g. ML lead), against which metrics (`auc_roc`, `precision_top10`, `recall_top10`,
       lift CI, fairness flag, from the package's `evaluation_metrics.json`), the exact
       `update-model-package` command, quota check, features fresh, prereqs 5-6 applied,
       alarm in OK.
-- [ ] **3. Rollback criteria.** Metric `ModelLatency` p95 on the canary variant, threshold
+- [x] **3. Rollback criteria.** Metric `ModelLatency` p95 on the canary variant, threshold
       200000 microseconds (200 ms), 3 consecutive 1-minute periods; identical to
       `rollback-alarm.json`. Who makes the call (a role). The action: `rollback-action.sh`.
-- [ ] **4. Monitoring window.** Production: 48 h at 9:1 before promotion. Lab: 60 min. State
+- [x] **4. Monitoring window.** Production: 48 h at 9:1 before promotion. Lab: 60 min. State
       the compression explicitly: what 48 h catches that 60 min cannot (daily and weekly
       traffic cycles, the nightly feature refresh landing, slow drift, memory growth, a
       full business cycle of retention outcomes) and what we would additionally monitor
       (5XX rate, score distribution per variant from data capture, downstream campaign
       metrics). Auto-scaling: the policy, and one sentence on why burstable `ml.t2.*`
       cannot be a scalable target (CPU credits, not sustained capacity). Define "clean".
-- [ ] **5. Stakeholder notifications.** Roles, not people; what each receives at deployment
+- [x] **5. Stakeholder notifications.** Roles, not people; what each receives at deployment
       start, promotion, rollback. A small table.
-- [ ] **6. Post-deployment review.** When, who attends, what artifact it produces.
-- [ ] **7. Resource cleanup.** Order and verification: `teardown-lab5.sh`, the six `OK`
+- [x] **6. Post-deployment review.** When, who attends, what artifact it produces.
+- [x] **7. Resource cleanup.** Order and verification: `teardown-lab5.sh`, the six `OK`
       lines, the three live-API counts; D10 (approvals reset if the artifact bucket goes).
-- [ ] Stranger test: every name defined, every command copy-pasteable from the repo root.
+- [x] Stranger test: every name defined, every command copy-pasteable from the repo root.
 
 ### 2b. `docs/lab5-security-assessment.md` (Tasks 3 and 4)
-- [ ] **STRIDE table** (15 pts): at least 5 threats across at least 3 categories; columns
+- [x] **STRIDE table** (15 pts): at least 5 threats across at least 3 categories; columns
       Threat, STRIDE Category, Likelihood, Impact, Mitigation, AWS Control; every cell
       filled; every mitigation names an AWS service **and** the control (not "use
       encryption"). At least one row names which Lab 2 role contains the blast radius
@@ -253,7 +258,7 @@ long commands. Seven numbered sections, in the handout's order (the rubric cites
       boundary or VPC endpoint policy on the endpoint; SSE-S3 means no key-level audit or
       separation; data capture stores raw inputs; no CloudTrail data events on the bucket).
       Aim for 6-7 rows over 4+ categories for margin.
-- [ ] **Data classification table** (10 pts): all seven assets (customer PII, transaction
+- [x] **Data classification table** (10 pts): all seven assets (customer PII, transaction
       history, behavioral clickstream, product catalog, model weights, inference logs,
       Feature Store records); for each: tier (Public / Internal / Confidential /
       Restricted), encryption (SSE-S3, SSE-KMS or CSE) **with a stated reason for the
@@ -261,7 +266,7 @@ long commands. Seven numbered sections, in the handout's order (the rubric cites
       yes/no/conditions. Be honest that today everything is SSE-S3
       (`modules/storage/main.tf:54`) and say what should move to SSE-KMS and why.
       Clickstream and catalog are not in our pipeline; classify them as NorthStar assets anyway.
-- [ ] **Privacy impact assessment** (15 pts), four sections:
+- [x] **Privacy impact assessment** (15 pts), four sections:
       1. Personal data inventory by pipeline stage (raw CSV, processed, features, training
          set, endpoint payloads, data capture).
       2. Lawful basis: choose **one** and justify for NorthStar's retention use case.
@@ -276,7 +281,7 @@ long commands. Seven numbered sections, in the handout's order (the rubric cites
          per customer; the 7-day + 1-day lifecycle from prereq 6 is the control). Name the
          hardest step and why it is not a delete operation (the trained model, or the
          offline store's history).
-- [ ] README: a "Lab 5: deployment and security" section (layout of `deployment/`, how to
+- [x] README: a "Lab 5: deployment and security" section (layout of `deployment/`, how to
       deploy, capture and tear down, what `docs/lab5-*` contains).
 - [ ] Commit Phases 0-2. Pushing is free while no CI stack exists.
 

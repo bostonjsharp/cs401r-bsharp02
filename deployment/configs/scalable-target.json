@@ -1,0 +1,7 @@
+{
+  "ServiceNamespace": "sagemaker",
+  "ResourceId": "endpoint/northstar-churn-prod/variant/champion",
+  "ScalableDimension": "sagemaker:variant:DesiredInstanceCount",
+  "MinCapacity": 1,
+  "MaxCapacity": 2
+}
