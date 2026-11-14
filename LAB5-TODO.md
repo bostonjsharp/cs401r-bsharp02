@@ -283,9 +283,20 @@ long commands. Seven numbered sections, in the handout's order (the rubric cites
          offline store's history).
 - [x] README: a "Lab 5: deployment and security" section (layout of `deployment/`, how to
       deploy, capture and tear down, what `docs/lab5-*` contains).
-- [ ] Commit Phases 0-2. Pushing is free while no CI stack exists.
+- [x] Commit Phases 0-2. Pushing is free while no CI stack exists.
 
 ## Phase 3 - AWS session (**COSTS MONEY**: one sitting, same-day teardown)
+
+Status 2026-11-13: **done, everything torn down.** Champion v4, canary v5 (commit `f6af7e9c`).
+Endpoint InService 03:55:52Z, deleted 05:06:50Z (71 min). Split 180 / 20 over 200; 78 of 802
+calls to the canary over the 60-minute window; p95 5,310 / 7,853 microseconds; 0 errors; alarm
+`OK` throughout; 100 / 0 after rollback. Data capture wrote `.jsonl` for both variants (prereq
+5 works). CI stack, endpoint and Lab 2 stack all deleted; v4 and v5 set to Rejected (D10);
+billing sweep all zero. Local copies for Lab 6 in `model/` (gitignored): both `model.tar.gz`,
+metrics, and the `datacapture/` files. Two things found on the way: package metrics live at
+`ModelMetrics.ModelQuality.Statistics.S3Uri` (plan corrected), and `teardown-lab2.sh` looped
+forever on step 1 because a 500-key delete payload exceeds the Windows command-line limit
+(batch reduced to 100 in the script).
 
 Ask before step 1. Expected wall clock ~3 h, expected spend $1.50-3.
 Tags: **[$]** bills, **[free]** API calls only, **[Boston]** run by hand with `!`.

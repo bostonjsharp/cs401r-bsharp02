@@ -24,7 +24,7 @@ unproven model; a canary limits a bad model to a tenth of it.
    `aws sagemaker list-model-packages --model-package-group-name northstar-churn-models --query 'ModelPackageSummaryList[].[ModelPackageArn,ModelApprovalStatus]' --output text`
 4. **Approval, by the ML Lead** (never the engineer who trained it). The ML Lead reads the
    package's `evaluation_metrics.json` (its S3 location:
-   `aws sagemaker describe-model-package --model-package-name <arn> --query ModelMetrics.ModelStatistics.S3Uri`)
+   `aws sagemaker describe-model-package --model-package-name <arn> --query ModelMetrics.ModelQuality.Statistics.S3Uri`)
    and approves only if `precision_top10 >= 0.50`,
    `recall_top10 >= 0.25`, `lift_ci_low > 0`, canary `auc_roc` is within 0.02 of the
    champion's, and the fairness flag is reviewed:
@@ -41,7 +41,7 @@ unapproved packages, creates the endpoint from `deployment/configs/endpoint-conf
 
 - **Metric:** `ModelLatency`, statistic **p95**, variant `canary`, namespace `AWS/SageMaker`.
 - **Threshold:** greater than **200000 microseconds (200 ms)** for **3 consecutive 60-second
-  periods**. Healthy is about 4,100 microseconds.
+  periods**. Healthy p95 is under 8,000 microseconds.
 - **As code:** `deployment/configs/rollback-alarm.json`, alarm `northstar-churn-rollback-latency`.
 - **Who decides:** the on-call ML Engineer rolls back the moment the alarm reads `ALARM`; no
   approval is needed. The ML Lead may also order it on any canary `Invocation5XXErrors`.
@@ -98,12 +98,13 @@ After the window (in production, the retired variant only; in this lab, everythi
 
 ## Lab execution record
 
-Filled in after the paid session (Phase 3); not yet run.
+Run 2026-11-13; evidence: `docs/lab5-deployment-output.txt`.
 
 | Item | Value |
 |---|---|
-| Champion / canary package versions | TBD |
-| Approved by (role), date, metrics reviewed | TBD |
-| Observed split over 200 calls at 9:1 | TBD |
-| p95 `ModelLatency`, champion / canary | TBD |
-| Split over 100 calls after rollback | TBD |
+| Champion / canary package versions | v4 / v5 (commit `f6af7e9c`) |
+| Approved by (role), date, metrics reviewed | ML Lead, 2026-11-13: `precision_top10` 0.73, `recall_top10` 0.33, `lift_ci_low` 0.045, `auc_roc` 0.7848; tier flags reviewed |
+| Observed split over 200 calls at 9:1 | champion 180 / canary 20 |
+| 60-minute window | canary 78 of 802 calls (9.7%), zero 4XX/5XX, alarm `OK` |
+| p95 `ModelLatency`, champion / canary | 5,310 / 7,853 microseconds |
+| Split over 100 calls after rollback | champion 100 / canary 0 |

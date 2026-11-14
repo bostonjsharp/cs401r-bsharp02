@@ -390,6 +390,11 @@ The CI build (`buildspec.yml`, `pre_build`) now also runs a security scan,
 | `lab5-security-assessment.md` | STRIDE threat model against the three IAM roles, seven-asset data classification, privacy impact assessment with the erasure workflow |
 | `lab5-deployment-output.txt` | captured while live: registry approvals, both variants and weights, scaling, alarm state, observed split, split after rollback, post-teardown counts (written during the AWS session) |
 | `lab5-teardown-output.txt` | written by `scripts/teardown-lab5.sh`; six lines ending `OK` (written during the AWS session) |
+| `lab5-build-security.log` | CodeBuild log of the run that registered v5: `Running security scan`, bandit summary with 0 HIGH, regression test against champion v4 |
+
+Deployed and torn down on 2026-11-13: champion v4, canary v5, observed split
+180 / 20 over 200 calls, 100 / 0 after rollback. After the Lab 2 teardown both
+packages were set back to `Rejected`, because their artifacts no longer exist.
 
 ## Evidence
 

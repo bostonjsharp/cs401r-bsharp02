@@ -53,7 +53,11 @@ if aws s3api head-bucket --bucket "${BUCKET}" 2>/dev/null; then
   echo "[1/7] Emptying ${BUCKET} (all versions and delete markers)"
   for key in Versions DeleteMarkers; do
     while true; do
-      payload=$(aws s3api list-object-versions --bucket "${BUCKET}" --max-keys 500 \
+      # 100 keys per batch, not 500: the payload travels on the command line, and
+      # on Windows (Git Bash) 500 long artifact keys exceed the ~32 KB limit. The
+      # delete then fails with "Argument list too long", which the redirect below
+      # hides, and this loop never ends. Observed 2026-11-13.
+      payload=$(aws s3api list-object-versions --bucket "${BUCKET}" --max-keys 100 \
         --output json --query "{Objects: ${key}[].{Key:Key,VersionId:VersionId}}" 2>/dev/null)
       count=$(echo "${payload}" | python3 -c "import sys,json; o=json.load(sys.stdin).get('Objects'); print(len(o) if o else 0)" 2>/dev/null || echo 0)
       [ "${count}" = "0" ] && break
