@@ -34,6 +34,10 @@ locals {
     "--TempDir"                          = local.temp_dir
     "--enable-continuous-cloudwatch-log" = "true"
     "--enable-job-insights"              = "false"
+    # Lab 6: publish job metrics to the CloudWatch "Glue" namespace (the
+    # pipeline layer of the dashboard). The flag is presence-only; Glue
+    # ignores the value. Needs the GlueJobMetrics statement on DataEngineer.
+    "--enable-metrics" = "true"
   }
 }
 

@@ -1,8 +1,9 @@
 # ── modules/iam ──────────────────────────────────────────────────────────────
-# Three personas, each one role + one policy + one attachment:
+# Four roles, each one role + one policy + one attachment:
 #   MLEngineer   (Lab 1) trains and deploys; reads features/, writes artifacts/
 #   DataEngineer (Lab 2) runs the Glue pipeline; writes raw/ processed/ features/
 #   ModelMonitor (Lab 2) observes; writes CloudWatch metrics and nothing else
+#   ModelMonitorExecution (Lab 6) runs the drift job; writes monitoring/ only
 # Every boundary is enforced by omission: there are no Deny statements, a
 # role simply is not granted what it must not do.
 #
@@ -188,6 +189,20 @@ resource "aws_iam_policy" "ml_engineer" {
         }
       },
       {
+        # Lab 6 handout, prerequisite 3 (verbatim). The endpoint's instance
+        # metrics (CPU, memory, disk) are published AS this role. The Lab 4
+        # statement above already matches this namespace through its wildcard;
+        # this one names it exactly so the infrastructure layer of the
+        # dashboard does not depend on a pattern written for training jobs.
+        Sid      = "EndpointInstanceMetrics"
+        Effect   = "Allow"
+        Action   = ["cloudwatch:PutMetricData"]
+        Resource = "*"
+        Condition = {
+          StringEquals = { "cloudwatch:namespace" = "/aws/sagemaker/Endpoints" }
+        }
+      },
+      {
         # BatchCheckLayerAvailability: Lab 4, pulled by the training container runtime.
         Sid    = "ECRRead"
         Effect = "Allow"
@@ -281,7 +296,26 @@ resource "aws_iam_policy" "data_engineer" {
           "${local.data_bucket_arn}/raw/*",
           "${local.data_bucket_arn}/processed/*",
           "${local.data_bucket_arn}/features/*",
+          # Lab 6 errata (Nov 19). Both jobs write with .mode("overwrite"). On
+          # a RE-run Glue deletes the old output and writes a "<parent>_$folder$"
+          # marker object at the bucket root, outside the three prefixes, so
+          # the first run works and every later one fails AccessDenied. Two
+          # exact keys, not the bucket. ($folder$ is literal: only "${" interpolates.)
+          "${local.data_bucket_arn}/processed_$folder$",
+          "${local.data_bucket_arn}/features_$folder$",
         ]
+      },
+      {
+        # Lab 6 handout, prerequisite 3 (verbatim). Glue's --enable-metrics
+        # job metrics are published AS the job role. Without this nothing
+        # errors: the jobs succeed and the Glue namespace stays empty.
+        Sid      = "GlueJobMetrics"
+        Effect   = "Allow"
+        Action   = ["cloudwatch:PutMetricData"]
+        Resource = "*"
+        Condition = {
+          StringEquals = { "cloudwatch:namespace" = "Glue" }
+        }
       },
       {
         # Glue downloads its own job script from here. Read only.
@@ -417,4 +451,95 @@ resource "aws_iam_policy" "model_monitor" {
 resource "aws_iam_role_policy_attachment" "model_monitor" {
   role       = aws_iam_role.model_monitor.name
   policy_arn = aws_iam_policy.model_monitor.arn
+}
+
+# ── Lab 6: ModelMonitorExecution ─────────────────────────────────────────────
+# The identity the Evidently drift job (a SageMaker Processing Job) runs as.
+# ModelMonitor above OBSERVES and cannot write to S3 or pull an image; this
+# role EXECUTES: it pulls the scikit-learn container, reads datacapture/ and
+# monitoring/, and writes its reports. Body is the Lab 6 handout's
+# prerequisite 2 with our bucket local (data_bucket_arn) substituted.
+# What it leaves out is the design: it can write only under monitoring/, so a
+# drift job can never overwrite the raw/, features/ or artifacts/ data it is
+# judging, and it has no CloudWatch metric write, because drift metrics are
+# published from the laptop after the job returns (monitoring/publish_metrics.py).
+resource "aws_iam_role" "model_monitor_execution" {
+  name        = "${local.name_prefix}-ModelMonitorExecution"
+  description = "Execution role for the Evidently drift processing job (ModelMonitorExecution)"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect    = "Allow"
+      Principal = { Service = "sagemaker.amazonaws.com" }
+      Action    = "sts:AssumeRole"
+    }]
+  })
+
+  tags = {
+    Name = "${local.name_prefix}-ModelMonitorExecution"
+  }
+}
+
+resource "aws_iam_policy" "model_monitor_execution" {
+  name        = "${local.name_prefix}-ModelMonitorExecutionPolicy"
+  description = "Evidently drift job: pull the sklearn image, read datacapture and monitoring, write monitoring reports"
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Sid    = "ECRPullProcessingImage"
+        Effect = "Allow"
+        Action = [
+          "ecr:GetAuthorizationToken",
+          "ecr:BatchCheckLayerAvailability",
+          "ecr:GetDownloadUrlForLayer",
+          "ecr:BatchGetImage",
+        ]
+        Resource = "*"
+      },
+      {
+        Sid      = "S3BucketList"
+        Effect   = "Allow"
+        Action   = ["s3:ListBucket", "s3:GetBucketLocation"]
+        Resource = local.data_bucket_arn
+      },
+      {
+        Sid    = "ReadCaptureBaselineAndCode"
+        Effect = "Allow"
+        Action = ["s3:GetObject"]
+        Resource = [
+          "${local.data_bucket_arn}/datacapture/*",
+          "${local.data_bucket_arn}/monitoring/*",
+        ]
+      },
+      {
+        Sid      = "WriteMonitoringReports"
+        Effect   = "Allow"
+        Action   = ["s3:PutObject", "s3:AbortMultipartUpload"]
+        Resource = "${local.data_bucket_arn}/monitoring/*"
+      },
+      {
+        Sid    = "CloudWatchLogs"
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents",
+          "logs:DescribeLogStreams",
+        ]
+        Resource = "arn:aws:logs:*:*:log-group:/aws/sagemaker/*"
+      },
+    ]
+  })
+
+  tags = {
+    Name = "${local.name_prefix}-ModelMonitorExecutionPolicy"
+  }
+}
+
+resource "aws_iam_role_policy_attachment" "model_monitor_execution" {
+  role       = aws_iam_role.model_monitor_execution.name
+  policy_arn = aws_iam_policy.model_monitor_execution.arn
 }

@@ -37,6 +37,11 @@ output "model_monitor_role_arn" {
   value       = module.iam.model_monitor_role_arn
 }
 
+output "model_monitor_execution_role_arn" {
+  description = "ARN of the ModelMonitorExecution role (Lab 6 drift job)"
+  value       = module.iam.model_monitor_execution_role_arn
+}
+
 output "sagemaker_domain_id" {
   description = "ID of the SageMaker Domain"
   value       = module.sagemaker.domain_id

@@ -27,7 +27,9 @@ rag/index/
 data/processed/
 data/features/
 data/northstar-raw-sample.csv
-reports/
+/reports/
+# (anchored to the repo root on purpose: Lab 6 COMMITS monitoring/reports/
+# drift_report.json and drift_violations.json; an unanchored "reports/" hid them.)
 
 # Terraform saved plans (binary, may embed values)
 tfplan

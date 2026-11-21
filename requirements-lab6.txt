@@ -1,0 +1,18 @@
+# Lab 6 - Monitoring & Reliability (laptop side only)
+# Install into the venv:  .venv/Scripts/python.exe -m pip install -r requirements-lab6.txt
+# (use `python -m pip`, not the pip shim: the venv was created at another path.)
+# Python 3.14.2 verified 2026-11-21; everything here was already present from Lab 3.
+#
+# Evidently is deliberately NOT listed. It runs inside the SageMaker processing
+# job, which pip-installs evidently==0.7.21 into a Python 3.12 container
+# (monitoring/run_evidently_job.py). Nothing on the laptop imports it:
+# drift_direction() is tested with plain pytest.
+
+boto3      # launcher, traffic generator, metric publisher, dashboard
+pandas     # baseline export
+pyarrow    # reads the Lab 2 features/ parquet
+pytest     # monitoring/tests/
+
+# Optional: log each drift run to the MLflow App (experiment northstar-drift)
+mlflow
+sagemaker-mlflow
