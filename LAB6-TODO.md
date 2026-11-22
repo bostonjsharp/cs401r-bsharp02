@@ -16,7 +16,7 @@ four errata). Starter kit: `C:\Users\bosto\Downloads\Lab6-Starter-Kit.zip` (the 
 Suggested pacing: Phases 0-2 (free) Sat-Mon, Phase 3 (paid sitting, ~3 h) Tue or Wed,
 Phase 4 right after. Thanksgiving is Thu Nov 26; do not leave Phase 3 for the holiday weekend.
 
-### Errata received (all four, read first)
+### Errata received (all five, read first)
 
 1. **Kit now exists** (Nov 18). `scripts/preflight-lab6.sh`, `scripts/teardown-lab6.sh`,
    `monitoring/run_evidently_job.py`, `monitoring/evidently_drift.py`,
@@ -37,6 +37,13 @@ Phase 4 right after. Thanksgiving is Thu Nov 26; do not leave Phase 3 for the ho
 7. **Submitting section** (Nov 19): the two-window capture block, the complete file list and
    the pre-tag checks. ModelLatency is **microseconds** (200 ms = `200000`). Every alarm name
    must contain `northstar`.
+8. **Cost table corrected** (Nov 21). The handout priced one endpoint instance; the canary
+   deploy runs two. Corrected 3 h session: $0.34 on 2 x t2.medium, **$0.70 on 2 x m5.large**
+   (ours, already what D7 assumed). Overnight (14 h) on m5.large is $3.26; forgotten, it
+   breaks the $10 budget in **~43 hours**. Custom metrics **are** prorated by the hour, and
+   only for hours with data: a session's worth is a couple of cents. No work or grading
+   change. If Phase 3 is ever interrupted, run `scripts/teardown-lab6.sh` before walking
+   away; redeploying is ~7 min.
 
 ## What we are building, in one paragraph
 
@@ -61,7 +68,7 @@ drift plan, four SLOs and two runbooks. Everything is captured to
 | **D4** | **Glue jobs do not pass `--enable-metrics`** (no hit anywhere under `infrastructure/`). | Prerequisite 3's DataEngineer grant is useless without it; the `Glue` namespace stays empty. | Add `"--enable-metrics" = "true"` to both jobs' `default_arguments` in the Glue module. Capture section 7 itself is `get-job-runs`, so it fills regardless; the dashboard widget needs the metric or the EventBridge rule (D8). |
 | **D5** | MLEngineer already has `PutMetricData` with `StringLike cloudwatch:namespace = /aws/sagemaker/*` (`main.tf:180-189`), which already matches `/aws/sagemaker/Endpoints`. | Prerequisite 3's MLEngineer statement may be redundant. | Add the handout's `EndpointInstanceMetrics` statement anyway (harmless, matches the handout for the TA). Check section 9 is non-empty in the sitting. |
 | **D6** | Capture block is written for macOS/Linux bash. On Git Bash: `python3` may not exist, and **`--namespace /aws/sagemaker/Endpoints` is rewritten to a Windows path** by MSYS. | Section 9 silently returns nothing; `S=` is empty. | Put the block in `scripts/capture-lab6.sh` with `export MSYS_NO_PATHCONV=1` and `python` (venv) instead of `python3`. Same section titles, same commands, so `grep -c '^===== '` still gives 12. |
-| **D7** | Our endpoint is 2 x `ml.m5.large` ($0.23/h), not the handout's t2.medium table. `deploy-canary.sh` attaches autoscaling, which needs non-burstable. | Cost table in the handout understates ours. | Keep m5.large; 3 h is ~$0.70. `teardown-lab6.sh` deregisters the scalable target. |
+| **D7** | Our endpoint is 2 x `ml.m5.large` ($0.23/h), not the handout's t2.medium table. `deploy-canary.sh` attaches autoscaling, which needs non-burstable. | The handout's original table understated ours; the Nov 21 correction (erratum 8) now gives the same $0.70 for 3 h. | Keep m5.large; 3 h is ~$0.70. `teardown-lab6.sh` deregisters the scalable target. |
 | **D8** | Trap 14: Glue task metrics miss driver failures; the "pipeline" alert should be an EventBridge rule on `Glue Job State Change` (FAILED/ERROR/TIMEOUT). `teardown-lab6.sh` deletes alarms by name but **not** EventBridge rules or SNS topics. | An orphan rule/topic (free, but the handout lists rules under required teardown). | Define rule + SNS topic + alarms in `monitoring/alerts/main.tf`; run `terraform destroy` there **before** `teardown-lab6.sh`. Rule named `northstar-glue-job-failed`; alarm on `AWS/Events` `TriggeredRules`. |
 | D9 | `.venv` was created at the old repo path (`D:\dev\bost\cs401r-bsharp02`); launcher shims may be stale. No `evidently`, no `sagemaker` SDK installed (neither is needed locally except to unit-test `drift_direction`, which needs neither). | `pip` shim may fail. | Use `.venv/Scripts/python.exe -m pip`. Local needs: `boto3`, `pandas`, `pyarrow` (baseline export), `sagemaker-mlflow` (optional). Add `requirements-lab6.txt`. |
 | D10 | Lab 5's local `model/datacapture/` has only 30 files, mostly 200 copies of `sample.csv`. | Useless as a comparison window (dedup leaves a handful of rows). | Generate fresh traffic: `monitoring/invoke_traffic.py`, one row per request, distinct rows. ~10% goes to canary, so send >= 700 to get >= 500 on champion (plan on 800). |
@@ -84,7 +91,7 @@ alarm is already named `northstar-churn-rollback-latency` at `200000`; `lab5-sub
 | Glue pipeline run (crawler + 2 jobs) | ~$0.25 | YES (baseline source + pipeline metrics) | Once; a second run only to prove the `$folder$` fix if time allows |
 | Evidently job, `ml.t3.medium` | ~$0.002/run | YES | Run as often as needed |
 | CloudWatch alarms (6-8) | $0.10/alarm-month, prorated | YES | Destroyed same sitting: cents |
-| Custom metrics | $0.30/metric-month, **not** prorated, first 10 free | YES | Keep to <= 7 metric/dimension combos |
+| Custom metrics | $0.30/metric-month, prorated hourly, only for hours with data (erratum 8) | YES | 9 combos for one session: cents |
 | Dashboard | free (first 3) | YES | Delete at teardown anyway |
 | CI stack / retraining | ~$0.15/run | NO (D1) | Only as fallback |
 
@@ -124,53 +131,60 @@ Status 2026-11-21: **done, nothing applied to AWS, nothing committed.**
 
 ## Phase 1 - Monitoring code (FREE; Task 1 + Task 3)
 
-- [ ] `monitoring/evidently_drift.py`: implement `drift_direction()` (PSI/JSD-style
-      statistics: `>`; KS p-value: `<`; unknown method: raise). Set `DRIFT_PLAN` to match
-      Phase 2a (top-3 PSI features + KS ones). Also fix the `detail` string's operator if a
-      third method is added.
-- [ ] `monitoring/tests/test_drift_direction.py`: the handout's synthetic table (shift
-      0/2/5/15) as assertions. Run locally, no Evidently needed.
-- [ ] `monitoring/export_baseline.py`: read the Lab 2 `features/` parquet, keep training
-      customers, write `monitoring/baseline/baseline.csv` with a header and exactly the 11
-      `FEATURE_COLUMNS` in order (no `churn_label`, no `churn_risk_score`); upload to
-      `s3://<bucket>/monitoring/baseline/`. Runs in Phase 3 (needs the pipeline output).
-- [ ] `monitoring/invoke_traffic.py`: N distinct rows, **one row per request**, `text/csv`,
-      prints the per-variant count from the response's `InvokedProductionVariant`. Source
-      rows: a held-out slice of the same feature table (clean traffic; zero violations is a
-      pass). Also counts scores above the churn threshold for the business metric.
-- [ ] `monitoring/publish_metrics.py`: reads `drift_violations.json` (local path or S3 key),
-      `put_metric_data` to `NorthStar/ChurnModel` with `EndpointName` dimension:
-      `DriftDetected` (0/1), `DriftViolationCount`, per-feature `FeatureDriftValue`, and
-      `ChurnAlertVolume` (D11). Optional `--mlflow-arn` (D12).
-- [ ] `monitoring/dashboards/build_dashboard.py` (or hand-written body): five labelled rows,
-      one per layer: infra (`/aws/sagemaker/Endpoints` CPU, memory), pipeline (`Glue`
-      metrics + `AWS/Events` `TriggeredRules`), model (`DriftDetected`, PSI values with a 0.2
-      annotation), application (`ModelLatency` p50/p95/p99 with a 200000 annotation),
-      business (`ChurnAlertVolume`). The committed `northstar-dashboard.json` is the
-      **export** from `get-dashboard` in Phase 3, not this draft.
-- [ ] `monitoring/alerts/main.tf` (own state, local backend) + `monitoring/alerts/README.md`
-      (the spec): >= 6 alarms, all named `northstar-*`, latency in microseconds,
-      `evaluation_periods >= 2` (cold start):
+Status 2026-11-21: **written and checked offline; nothing applied to AWS.**
+`pytest monitoring/tests` 18 passed; `terraform validate` clean in `monitoring/alerts/`;
+baseline export and traffic generator dry-run against `.dryrun/features`.
+
+- [x] `monitoring/evidently_drift.py`: `drift_direction()` implemented from two explicit
+      sets (`STATISTIC_METHODS` use `>`, `P_VALUE_METHODS` use `<`); unknown method or NaN
+      raises. The `detail` string uses the same sets. `DRIFT_PLAN` left at the kit's five
+      features (3 PSI at 0.2, 2 KS at 0.05); Phase 2a justifies or changes it.
+- [x] `monitoring/tests/test_drift_direction.py`: the handout's shift table both ways, the
+      trap itself, boundaries, unknown method, and that the container's `FEATURE_COLUMNS`
+      equals `models/churn/churn_model.py`'s. Run: `.venv/Scripts/python.exe -m pytest monitoring/tests -q`.
+- [x] `monitoring/features.py` (new, shared by the laptop scripts): reproduces the Lab 3/4
+      split (sorted by `customer_id`, 70/30, seed 42, stratified). Checked: **6,999 train /
+      3,000 val**, the same counts as `model/v4/evaluation_metrics.json`.
+- [x] `monitoring/export_baseline.py`: baseline = the 6,999 **training** customers, 11
+      columns, header. `monitoring/baseline/baseline.csv` on disk now is a **provisional**
+      copy built from `.dryrun/features`; Phase 3 step 5 regenerates it from S3 and uploads.
+- [x] `monitoring/invoke_traffic.py`: distinct **validation** customers, one row per
+      request, counts per variant and scores >= 0.5; writes
+      `monitoring/reports/traffic_summary.json`.
+- [x] `monitoring/publish_metrics.py`: `NorthStar/ChurnModel`, dimension `EndpointName`:
+      `DriftDetected`, `DriftViolationCount`, `FeaturePSI` and `FeatureKSPValue` (separate
+      names because they alert in opposite directions; extra `Feature` dimension),
+      `ChurnAlertVolume`, `ChurnAlertVolumeRatio` (volume / trailing 7-day average, 1.0
+      with no history). 9 metric/dimension combinations, cents for one session (erratum 8). `--dry-run`,
+      optional `--mlflow-arn` (writes `docs/lab6-mlflow-runs.txt`).
+- [x] `monitoring/dashboards/build_dashboard.py`: 16 widgets, five labelled rows, 11 metric
+      widgets. `--put` creates `NorthStar-AI-Platform`; `--export` writes the committed
+      `northstar-dashboard.json` from `get-dashboard`. **Unverified until the sitting:** the
+      Glue metric names/dimensions (`glue.driver.aggregate.numCompletedTasks`, `JobRunId=ALL`,
+      `Type=count`); check with `aws cloudwatch list-metrics --namespace Glue` and adjust.
+- [x] `monitoring/alerts/main.tf` + `README.md`: 4 SNS topics (one per tier), EventBridge
+      rule `northstar-glue-job-failed`, 9 metric alarms and 1 composite:
 
       | Alarm | Tier |
       |---|---|
-      | `northstar-p1-endpoint-5xx` (Invocation5XXErrors) | P1 |
-      | `northstar-p1-latency-p95-500ms` (ModelLatency p95 > 500000, 5 min) | P1 |
-      | `northstar-p2-latency-p95-200ms` (ModelLatency p95 > 200000) | P2 |
-      | `northstar-p2-cpu-high` (CPUUtilization > 80) | P2 |
-      | `northstar-p3-feature-drift` (DriftDetected >= 1) | P3 |
-      | `northstar-p3-glue-job-failed` (EventBridge rule, D8) | P3 |
-      | `northstar-p3-churn-alert-volume-drop` (< 70% of 7-day avg; static threshold, no anomaly band) | P3 |
-      | `northstar-p4-drift-job-stale` (no DriftDetected datapoint, missing = breaching) | P4 |
+      | `northstar-p1-endpoint-5xx` (>= 5/min, 2 of 2) | P1 |
+      | `northstar-p1-latency-p95-500ms` (> 500000, 5 of 5) | P1 |
+      | `northstar-p2-latency-p95-200ms` (> 200000, 3 of 3) | P2 |
+      | `northstar-p2-cpu-high` (> 80, 5 of 5) | P2 |
+      | `northstar-p3-feature-drift` (DriftDetected >= 1; notifies via composite `northstar-p3-feature-drift-notify`) | P3 |
+      | `northstar-p3-glue-job-failed` (`AWS/Events` TriggeredRules >= 1) | P3 |
+      | `northstar-p3-churn-alert-volume-drop` (ratio < 0.7) | P3 |
+      | `northstar-p4-drift-job-stale` (no datapoint in 24 h; missing = breaching) | P4 |
+      | `northstar-suppress-retraining-window` (suppressor, not an alert) | - |
 
-      README: escalation per tier (P1 wake on-call + page manager; P2 on-call; P3 Slack +
-      ticket; P4 ticket), >= 1 suppression rule (P3 drift suppressed during the scheduled
-      retraining window; P2/P3 latency suppressed 10 min after a deploy), and the
-      observer-vs-executor role note the handout asks for (ModelMonitor vs
-      ModelMonitorExecution).
-- [ ] `scripts/capture-lab6.sh`: the handout's Window 1 / Window 2 blocks with D6 fixes
-      (`capture-lab6.sh 1` creates the file, `capture-lab6.sh 2` appends).
-- [ ] `terraform validate` in `monitoring/alerts/`; `bash -n` the new scripts.
+      README: tier table with escalation action per tier, three suppression rules (rule 1 is
+      real: composite alarm `actions_suppressor`), threshold notes, observer-vs-executor
+      role note, operating commands. Capture section 10 lists metric alarms only, so the
+      composite will not appear there; that is expected.
+- [x] `scripts/capture-lab6.sh 1|2`: the handout's blocks verbatim plus D6 fixes; refuses
+      to overwrite a finished file; lists empty sections and AccessDenied lines after window 1.
+- [x] `terraform init -backend=false` + `validate` in `monitoring/alerts/` (commit
+      `.terraform.lock.hcl`; `.terraform/` and state are ignored); `bash -n` on the script.
 
 ## Phase 2 - Documents (FREE; Tasks 2, 4, 5) -> `docs/lab6-runbook.md`
 
@@ -229,16 +243,17 @@ Tags: **[$]** bills, **[free]** API calls only, **[Boston]** run by hand with `!
 10. **[free] Publish**: `publish_metrics.py`. Verify both metrics with
     `get-metric-statistics`. Optional MLflow run -> `docs/lab6-mlflow-runs.txt`.
 11. **[$] Alarms**: `terraform -chdir=monitoring/alerts apply` (cents).
-12. **[free] Dashboard**: `put-dashboard NorthStar-AI-Platform`, then `get-dashboard` ->
-    `monitoring/dashboards/northstar-dashboard.json` (the body only, valid JSON, has
-    `widgets`).
+12. **[free] Dashboard**: `python monitoring/dashboards/build_dashboard.py --put --export`
+    -> `monitoring/dashboards/northstar-dashboard.json`. First run
+    `aws cloudwatch list-metrics --namespace Glue` and fix the Glue widget if the names differ.
 13. **[$] Optional (~$0.15, 5 min)**: re-run one Glue job to prove the `$folder$` fix and
     get a second run in section 7.
 14. **[free] Window 1**: `bash scripts/capture-lab6.sh 1`. **Open the file and read all 11
     sections.** Empty 7 or 9, or any AccessDenied: fix now, re-run, endpoint still up.
     CPU/memory need a few minutes of endpoint life after the grant.
 15. **[free]** `terraform -chdir=monitoring/alerts destroy` (removes the EventBridge rule
-    and SNS topic the kit script does not know about, D8). Delete the dashboard.
+    SNS topics and composite alarm the kit script does not know about, D8). Delete the
+    dashboard (`aws cloudwatch delete-dashboards --dashboard-names NorthStar-AI-Platform`).
 16. **[stops the endpoint meter]** `bash scripts/teardown-lab6.sh` ->
     `docs/lab6-teardown-output.txt` ending `TEARDOWN COMPLETE`.
 17. **[free] Window 2**: `bash scripts/capture-lab6.sh 2`. All three lines read 0.
@@ -292,5 +307,8 @@ Tags: **[$]** bills, **[free]** API calls only, **[Boston]** run by hand with `!
 - Do not use anomaly-detection alarms (orphan detectors survive `terraform destroy`).
 - No timers. If one is ever added, delete it before the endpoint.
 - Never commit `monitoring/alerts/terraform.tfstate`.
-- Custom metrics cannot be deleted; they age out. Expected.
+- Custom metrics cannot be deleted; they age out. Expected. They stop billing the hour we
+  stop publishing.
+- A forgotten 2 x m5.large endpoint passes the $10 budget in ~43 hours. Never end a sitting
+  with the endpoint up, even half done.
 - Keep AWS-facing description strings ASCII.

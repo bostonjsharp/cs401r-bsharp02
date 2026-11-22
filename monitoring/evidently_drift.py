@@ -96,26 +96,36 @@ IN_CAP = "/opt/ml/processing/input/capture"
 OUT = "/opt/ml/processing/output"
 
 
+# How to read the number each Evidently method returns. This table, not an
+# inline comparison, is what keeps the two families apart:
+#   statistic  a distance; it RISES with drift  -> drift when value > threshold
+#   p_value    a probability; it FALLS with drift -> drift when value < threshold
+# A method that is not listed is an error, never a silent default: guessing the
+# direction is exactly the defect this function exists to prevent.
+STATISTIC_METHODS = {"psi", "jensenshannon", "wasserstein", "kl_div", "hellinger"}
+P_VALUE_METHODS = {"ks", "chisquare", "z", "t_test", "mannw"}
+
+
 def drift_direction(method: str, value: float, threshold: float) -> bool:
     """Return True if this value means DRIFT, respecting each test's semantics.
 
-    TODO (Lab 6 Task 1): implement this function.
+    `method` is the Evidently test name from DRIFT_PLAN, `value` is the number
+    Evidently returned for that feature, `threshold` is the one from DRIFT_PLAN.
 
-    `method` is the Evidently test name from DRIFT_PLAN ("psi", "ks", ...),
-    `value` is the number Evidently returned for that feature, and `threshold`
-    is the threshold from DRIFT_PLAN. Return True when the feature has drifted.
-
-    Read "THE TRAP THAT WILL GET YOU" at the top of this file before you write
-    it. Your implementation must handle every test you put in DRIFT_PLAN.
-    Test it locally on the synthetic numbers in that table before you spend
-    money on a processing job.
-
-    run_evidently_job.py refuses to launch while this function still raises
-    NotImplementedError.
+    PSI returns a statistic (0.02 clean, 2.3 badly drifted): drift is
+    value > threshold. KS returns a p-value (0.27 clean, 0.0 badly drifted):
+    drift is value < threshold. See the table at the top of this file.
     """
-    raise NotImplementedError(
-        "drift_direction() is not implemented -- see the TODO in "
-        "monitoring/evidently_drift.py")
+    m = method.lower()
+    if value != value:  # NaN: Evidently could not compute the test
+        raise ValueError(f"{method} returned NaN; refusing to call that 'no drift'")
+    if m in STATISTIC_METHODS:
+        return value > threshold
+    if m in P_VALUE_METHODS:
+        return value < threshold
+    raise ValueError(
+        f"unknown drift method {method!r}: add it to STATISTIC_METHODS or "
+        f"P_VALUE_METHODS in monitoring/evidently_drift.py before using it")
 
 
 def load_baseline(path: str) -> pd.DataFrame:
@@ -255,7 +265,7 @@ def main() -> int:
                 "feature": col, "method": method,
                 "value": value, "threshold": threshold,
                 "detail": (f"{method.upper()} {value:.4f} "
-                           f"{'<' if method == 'ks' else '>'} {threshold}"),
+                           f"{'<' if method.lower() in P_VALUE_METHODS else '>'} {threshold}"),
             })
 
     summary = {
