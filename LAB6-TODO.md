@@ -186,33 +186,32 @@ baseline export and traffic generator dry-run against `.dryrun/features`.
 - [x] `terraform init -backend=false` + `validate` in `monitoring/alerts/` (commit
       `.terraform.lock.hcl`; `.terraform/` and state are ignored); `bash -n` on the script.
 
-## Phase 2 - Documents (FREE; Tasks 2, 4, 5) -> `docs/lab6-runbook.md`
+## Phase 2 - Documents (FREE; Tasks 2, 4, 5) -> `docs/lab6-runbook.md` (DONE 2026-11-22)
 
 ### 2a. Drift detection plan (Task 2, 15 pts)
-- [ ] Drift types ranked for retail churn, tied to NorthStar drivers (holiday promotions
-      pulling `days_since_last_purchase` and `purchase_frequency_30d`, catalog refresh
-      moving `category_diversity_score`, price/economy moving `avg_order_value`).
-- [ ] Per-feature table: feature, test (PSI / KS), baseline window, numeric threshold,
-      why. >= 3 features; must equal `DRIFT_PLAN` exactly. State which variant is analyzed
-      (champion) and why, and the 500-record minimum.
-- [ ] Concept-drift proxy with its lag stated (prediction-score distribution shift from
-      captured `endpointOutput`, lag ~1 day; early label proxy such as 30-day no-purchase
-      rate among top-decile scores, lag 30 days vs 90 for the true label).
+- [x] Drift types ranked (data > concept > degradation) with NorthStar drivers: holiday
+      promotions, catalog refresh, price/economy, plus offers changing the outcome.
+- [x] Per-feature table equal to `DRIFT_PLAN` (unchanged: 3 PSI at 0.2, 2 KS at 0.05), with
+      baseline window (6,999 training customers, cutoff 2026-04-01), champion-only, the
+      500-record minimum, and the KS false-positive caveat (confirm on a second run).
+- [x] Concept-drift proxies with lags: score distribution / volume ratio (1 day, cannot see
+      pure concept drift), **early-settled false positives** among a no-offer control group
+      (30 days, the primary proxy), matured label (90 days).
 
 ### 2b. SLOs (Task 4, 15 pts)
-- [ ] Four rows, each with a **numeric** error budget and a **specific** freeze trigger:
-      availability 99.5% (216 min / 30-day month, or 0.5% of requests), latency p95 <= 20000
-      us, Recall@10% >= 0.25 weekly, fairness gap <= 10 pp weekly. Note that our own cold
-      start (~24,000 us) spends latency budget; cite our measured Lab 5 p95 (5,310 us).
+- [x] Four rows, numeric budgets, specific freeze triggers. Assumes 300,000 requests/month.
+      Availability 1,500 failed requests or 216 min; latency 15,000 slow requests; quality
+      and fairness 1 failing week per 13.
+- [x] **Fairness SLO is stated as in breach today** (v4 gap 31 pp, Bronze 0.446 vs Gold
+      0.135). Deliberate: the doc says so and ties the freeze to Lab 4 gate C4.
 
 ### 2c. Two runbooks (Task 5, 20 pts)
-- [ ] Runbook A (data drift, PSI > 0.2 on `days_since_last_purchase`) and Runbook B (latency
-      spike, ModelLatency p95 > 500000 for > 5 min). All six sections, no TBD. Each has a
-      graceful-degradation containment option (A: fall back to the recency
-      `churn_risk_score` rule / hold offers; B: shift 100% to champion with
-      `deployment/configs/rollback-action.sh`, or serve cached scores). Resolution
-      verification names an alarm returning to `OK` and a metric value.
-- [ ] Fill real numbers in from Phase 3 afterwards (drift values, latency, alarm states).
+- [x] Runbook A (data drift) and Runbook B (latency spike), all six sections, exact handout
+      headings. Degradation fallbacks: A falls back to rule-based `churn_risk_score` or holds
+      offers; B rolls back, scales out, or serves the last stored score.
+- [ ] **After Phase 3:** fill section 4 ("Measured in the Lab 6 sitting"). Every open cell
+      reads `_pending sitting_`; `grep -c "pending sitting" docs/lab6-runbook.md` must be 0
+      before the tag.
 
 ## Phase 3 - AWS session (**COSTS MONEY**: one sitting, same-day teardown)
 
