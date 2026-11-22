@@ -100,6 +100,10 @@ def log_to_mlflow(arn: str, summary: dict, job_name: str, variant: str) -> None:
     """One MLflow run per drift job in experiment northstar-drift (optional)."""
     import mlflow
 
+    # MLflow prints an emoji when a run ends; a cp1252 Windows console raises on it.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="replace")
     mlflow.set_tracking_uri(arn)
     mlflow.set_experiment("northstar-drift")
     with mlflow.start_run(run_name=f"drift-{job_name}"):

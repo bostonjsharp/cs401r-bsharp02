@@ -389,24 +389,28 @@ suppresses further drift notifications (suppression rule 1).
 
 ## 4. Measured in the Lab 6 sitting
 
-Filled from `monitoring/reports/drift_violations.json` and
-`docs/lab6-monitoring-output.txt` after the paid sitting.
+Sitting of 2026-11-22 (endpoint InService 19:42 UTC, deleted 20:05 UTC). Sources:
+`monitoring/reports/drift_violations.json`, `monitoring/reports/traffic_summary.json` and
+`docs/lab6-monitoring-output.txt`.
 
 | Item | Value |
 |---|---|
-| Drift job name, status, instance | _pending sitting_ |
-| Captured champion records after de-duplication | _pending sitting_ |
+| Drift job name, status, instance | `nsc-evidently-1795377206`, Completed, `ml.t3.medium`, 124 s billable, role `northstar-dev-ModelMonitorExecution` |
+| Captured champion records after de-duplication | 718 (of 800 requests; 82 went to canary), `underpowered_window: false` |
 | Baseline rows / columns | 6,999 / 11 |
-| `days_since_last_purchase` PSI (threshold 0.2) | _pending sitting_ |
-| `purchase_frequency_30d` PSI (threshold 0.2) | _pending sitting_ |
-| `avg_order_value` PSI (threshold 0.2) | _pending sitting_ |
-| `category_diversity_score` KS p-value (threshold 0.05) | _pending sitting_ |
-| `total_spend_90d` KS p-value (threshold 0.05) | _pending sitting_ |
-| `DriftDetected` / violation count | _pending sitting_ |
-| `ChurnAlertVolume` (scores >= 0.5) / requests sent | _pending sitting_ |
-| `ModelLatency` p50 / p95 / p99, champion (us) | _pending sitting_ |
-| Alarm states at capture | _pending sitting_ |
+| `days_since_last_purchase` PSI (threshold 0.2) | 0.0171, no drift |
+| `purchase_frequency_30d` PSI (threshold 0.2) | 0.0079, no drift |
+| `avg_order_value` PSI (threshold 0.2) | 0.0325, no drift |
+| `category_diversity_score` KS p-value (threshold 0.05) | 0.6103, no drift |
+| `total_spend_90d` KS p-value (threshold 0.05) | 0.8918, no drift |
+| `DriftDetected` / violation count | 0 / 0 |
+| `ChurnAlertVolume` (scores >= 0.5) / requests sent | 289 / 800, zero request errors |
+| `ModelLatency` p50 / p95 / p99, champion (us) | 3,181 / 5,030 / 6,959 |
+| Alarm states at capture | All eight alerts `OK`, plus `northstar-churn-rollback-latency` `OK` |
+| Glue runs | transform SUCCEEDED (101 s); feature-engineer SUCCEEDED twice (216 s, 194 s), the second an overwrite re-run |
 
 The traffic sent in the sitting is the validation split of the same feature snapshot the
-baseline came from, so the expected result is **no drift**: a clean run that reports clean
-is the test passing, not a missing result.
+baseline came from, so the expected result is **no drift**, and that is what the job
+reported: every PSI is under 0.04 against a 0.2 threshold and both KS p-values are far
+above 0.05. A clean run that reports clean is the test passing. The p95 of 5,030 us sits
+where Lab 5 measured it (5,310 us), a quarter of the 20000 us SLO line.

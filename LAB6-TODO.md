@@ -209,11 +209,28 @@ baseline export and traffic generator dry-run against `.dryrun/features`.
 - [x] Runbook A (data drift) and Runbook B (latency spike), all six sections, exact handout
       headings. Degradation fallbacks: A falls back to rule-based `churn_risk_score` or holds
       offers; B rolls back, scales out, or serves the last stored score.
-- [ ] **After Phase 3:** fill section 4 ("Measured in the Lab 6 sitting"). Every open cell
+- [x] **After Phase 3:** fill section 4 ("Measured in the Lab 6 sitting"). Every open cell
       reads `_pending sitting_`; `grep -c "pending sitting" docs/lab6-runbook.md` must be 0
       before the tag.
 
 ## Phase 3 - AWS session (**COSTS MONEY**: one sitting, same-day teardown)
+
+**DONE 2026-11-22.** Lab 2 stack applied 19:38 UTC; endpoint InService 19:42, deleted
+20:05 UTC (about 23 minutes of endpoint time). All 18 steps ran, including optional 13.
+Results: drift job `nsc-evidently-1795377206` Completed, 718 champion records, 0
+violations (PSI 0.008-0.032, KS p 0.61 / 0.89); 9 datapoints published; 8 alerts + rollback
+alarm `OK`; dashboard exported (16 widgets); capture file has 12 sections, section 12 all
+zeros; `TEARDOWN COMPLETE`. Findings:
+- D1 worked as planned: tarballs restored to the original `ModelDataUrl` keys, v4/v5
+  approved, `deploy-canary.sh` unchanged. Both are `Rejected` again.
+- Glue metric names in the dashboard were correct as written.
+- Section 9 (CPU/memory) filled; `MSYS_NO_PATHCONV=1` did its job.
+- The `$folder$` fix is proven: the feature-engineer overwrite re-run SUCCEEDED.
+- MLflow App was still there; `docs/lab6-mlflow-runs.txt` written. `publish_metrics.py`
+  needed a console-encoding fix (MLflow prints an emoji; cp1252 raised).
+- `terraform apply/destroy` and the teardown scripts need the allow rules in
+  `.claude/settings.local.json`.
+- `monitoring/reports/drift_report.html` (3.8 MB) is gitignored; only the two JSONs are graded.
 
 Ask before step 1. Expected wall clock ~3 h, expected spend $1.25-2.50.
 Tags: **[$]** bills, **[free]** API calls only, **[Boston]** run by hand with `!` if blocked.
@@ -262,14 +279,14 @@ Tags: **[$]** bills, **[free]** API calls only, **[Boston]** run by hand with `!
 
 ## Phase 4 - Submit
 
-- [ ] Back-fill real numbers into `docs/lab6-runbook.md` and `monitoring/alerts/README.md`.
-- [ ] README: add a Lab 6 section (what is where, how to re-run).
-- [ ] Handout pre-tag checks: 12 section headers; baseline header has 11 columns; 0
+- [x] Back-fill real numbers into `docs/lab6-runbook.md` and `monitoring/alerts/README.md`.
+- [x] README: add a Lab 6 section (what is where, how to re-run).
+- [x] Handout pre-tag checks: 12 section headers; baseline header has 11 columns; 0
       `raise NotImplementedError`; `captured_records >= 500`, `underpowered_window` false;
       dashboard JSON loads and has widgets; every ModelLatency threshold is 200000/500000;
       `TEARDOWN COMPLETE` present; `bash scripts/check-secrets.sh` CLEAN;
       `git status --short monitoring/alerts/` shows no tfstate.
-- [ ] Commit, `git tag lab6-submit`, `git push origin main lab6-submit`.
+- [x] Commit, `git tag lab6-submit`, `git push origin main lab6-submit`.
 - [ ] **[Boston]** Paste the repo URL in Canvas.
 
 ---

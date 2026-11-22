@@ -1,0 +1,42 @@
+NorthStar Lab 6 teardown - account 829485866627, region us-east-1
+started 2026-11-22T20:04:43Z
+
+
+[1m1 - Monitoring schedules (delete before the endpoint)[0m
+  [32mOK[0m    none found
+
+[1m2 - In-flight monitoring processing jobs[0m
+  [32mOK[0m    none running
+
+[1m3 - Auto-scaling targets[0m
+  [32mOK[0m    deregistered endpoint/northstar-churn-prod/variant/champion
+
+[1m4 - Endpoint and its dependencies[0m
+  [32mOK[0m    deleted endpoint northstar-churn-prod (this is what stops the hourly charge)
+  [32mOK[0m    deleted endpoint config northstar-churn-canary
+  [32mOK[0m    deleted model northstar-churn-v5
+  [32mOK[0m    deleted model northstar-churn-v4
+
+[1m5 - CloudWatch alarms[0m
+  [32mOK[0m    deleted: northstar-churn-rollback-latency
+
+[1m5b - CloudWatch anomaly detectors (orphaned by terraform destroy)[0m
+  [32mOK[0m    none found
+
+[1m6 - Captured inference data (retained by design)[0m
+  [32mOK[0m    2 capture object(s) left in s3://northstar-dev-data-829485866627/datacapture/ (7-day lifecycle)
+  [32mOK[0m    5 monitoring artifact(s) retained under s3://northstar-dev-data-829485866627/monitoring/
+
+[1m7 - Verification (independent all-region sweep)[0m
+  [32mOK[0m    us-east-1 clean
+  [32mOK[0m    us-east-2 clean
+  [32mOK[0m    us-west-1 clean
+  [32mOK[0m    us-west-2 clean
+  [32mOK[0m    eu-west-1 clean
+  [32mOK[0m    eu-central-1 clean
+  [32mOK[0m    ap-southeast-1 clean
+  [32mOK[0m    ap-northeast-1 clean
+
+[32m[1mTEARDOWN COMPLETE - nothing is billing hourly.[0m
+finished 2026-11-22T20:06:27Z
+evidence written to docs/lab6-teardown-output.txt

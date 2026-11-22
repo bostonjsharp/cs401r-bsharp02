@@ -1,0 +1,4 @@
+mlflow.search_runs(experiment_names=['northstar-drift'])
+
+                          run_id   status                       start_time  metrics.psi_purchase_frequency_30d  metrics.psi_days_since_last_purchase  metrics.violation_count  metrics.ks_category_diversity_score  metrics.ks_total_spend_90d  metrics.psi_avg_order_value params.variant          params.job_name params.captured_records params.baseline_records            tags.mlflow.runName
+db5de5451c2349ce9987545935d6a26a FINISHED 2026-11-22 19:59:53.357000+00:00                            0.007935                              0.017131                      0.0                             0.610276                    0.891841                     0.032488       champion nsc-evidently-1795377206                     718                    6999 drift-nsc-evidently-1795377206

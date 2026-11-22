@@ -1,0 +1,41 @@
+{
+  "baseline_records": 6999,
+  "captured_records": 718,
+  "features_evaluated": 5,
+  "underpowered_window": false,
+  "drift_detected": false,
+  "violation_count": 0,
+  "violations": [],
+  "per_feature": {
+    "days_since_last_purchase": {
+      "method": "psi",
+      "threshold": 0.2,
+      "value": 0.01713125049720003,
+      "drifted": false
+    },
+    "purchase_frequency_30d": {
+      "method": "psi",
+      "threshold": 0.2,
+      "value": 0.007934834571162118,
+      "drifted": false
+    },
+    "avg_order_value": {
+      "method": "psi",
+      "threshold": 0.2,
+      "value": 0.032487761190408936,
+      "drifted": false
+    },
+    "category_diversity_score": {
+      "method": "ks",
+      "threshold": 0.05,
+      "value": 0.6102762026931761,
+      "drifted": false
+    },
+    "total_spend_90d": {
+      "method": "ks",
+      "threshold": 0.05,
+      "value": 0.8918406849748276,
+      "drifted": false
+    }
+  }
+}

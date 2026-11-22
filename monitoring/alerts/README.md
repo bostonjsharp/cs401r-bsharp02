@@ -50,7 +50,7 @@ they go to a channel and a ticket; paging for them is how on-call learns to igno
 ### Notes on the thresholds
 
 - **ModelLatency is in microseconds.** 200 ms is `200000`, 500 ms is `500000`. A threshold
-  of `200` would mean 0.2 ms, below our healthy p95 (*measured* 5,310 us on champion in
+  of `200` would mean 0.2 ms, below our healthy p95 (*measured* 5,030 us in the Lab 6 sitting, 5,310 us on champion in
   Lab 5), and the alarm would sit in ALARM permanently.
 - **No latency alarm uses one evaluation period.** The first invocation after a deploy
   runs about 6x slower (roughly 24,000 us). That is far below 200000, but the principle

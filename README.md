@@ -396,6 +396,62 @@ Deployed and torn down on 2026-11-13: champion v4, canary v5, observed split
 180 / 20 over 200 calls, 100 / 0 after rollback. After the Lab 2 teardown both
 packages were set back to `Rejected`, because their artifacts no longer exist.
 
+## Lab 6: monitoring and reliability
+
+The Lab 5 endpoint is redeployed and watched at five layers on one CloudWatch
+dashboard, `NorthStar-AI-Platform`. Drift is measured by **Evidently in a
+SageMaker Processing Job** (`ml.t3.medium`, role `ModelMonitorExecution`) that
+compares the champion's captured requests with the training set, and a
+laptop-side publisher turns its result into CloudWatch metrics.
+
+| File | What it is |
+|---|---|
+| `monitoring/evidently_drift.py` | Runs in the container. `DRIFT_PLAN` (3 features on PSI > 0.2, 2 on KS p-value < 0.05) and `drift_direction()`, which applies the opposite comparison to each |
+| `monitoring/run_evidently_job.py` | Launches the processing job and waits for it |
+| `monitoring/features.py`, `export_baseline.py` | Reproduce the training split; write the 6,999-customer, 11-feature `monitoring/baseline/baseline.csv` and upload it |
+| `monitoring/invoke_traffic.py` | Sends distinct validation customers, one row per request, and counts scores >= 0.5 |
+| `monitoring/publish_metrics.py` | Publishes `DriftDetected`, per-feature `FeaturePSI` / `FeatureKSPValue`, and the business metric `ChurnAlertVolume` to `NorthStar/ChurnModel` |
+| `monitoring/dashboards/build_dashboard.py` | Builds the dashboard; `northstar-dashboard.json` is the export of the live one |
+| `monitoring/alerts/main.tf`, `README.md` | Eight tiered alarms (2 P1, 2 P2, 3 P3, 1 P4), one SNS topic per tier, the Glue-failure EventBridge rule, and the alert specification with escalation and suppression rules |
+| `monitoring/tests/` | Laptop tests for the drift direction and the publisher: `python -m pytest monitoring/tests -q` |
+| `scripts/preflight-lab6.sh`, `capture-lab6.sh`, `teardown-lab6.sh` | Pre-flight checks, the two-window evidence capture, teardown |
+
+### Run it (AWS, bills while up: endpoint $0.23/hour)
+
+```bash
+# prerequisites: Lab 2 stack applied and pipeline run, v4/v5 artifacts in S3 and Approved
+bash deployment/deploy-canary.sh <champion-package-arn> <canary-package-arn>
+python monitoring/export_baseline.py
+python monitoring/invoke_traffic.py --n 800          # wait ~5 min for capture
+bash scripts/preflight-lab6.sh
+python monitoring/run_evidently_job.py --bucket <bucket> --role-arn <ModelMonitorExecution arn> \
+  --endpoint northstar-churn-prod --variant champion
+aws s3 cp s3://<bucket>/monitoring/reports/<job>/ monitoring/reports/ --recursive
+python monitoring/publish_metrics.py
+terraform -chdir=monitoring/alerts apply
+python monitoring/dashboards/build_dashboard.py --put --export
+bash scripts/capture-lab6.sh 1                       # read the file before going on
+terraform -chdir=monitoring/alerts destroy           # before the teardown script
+bash scripts/teardown-lab6.sh
+bash scripts/capture-lab6.sh 2
+```
+
+### Lab 6 documents and evidence
+
+| File | What it shows |
+|---|---|
+| `docs/lab6-runbook.md` | drift detection plan, four SLOs with error budgets and freeze triggers, runbooks for data drift and a latency spike, and the numbers measured in the sitting |
+| `monitoring/alerts/README.md` | alert specification: tiers, escalation, thresholds, suppression rules, observer and executor roles |
+| `docs/lab6-monitoring-output.txt` | twelve sections: endpoint and capture, baseline, drift job, one datapoint per layer, alarm states, dashboard, post-teardown counts |
+| `monitoring/reports/drift_report.json`, `drift_violations.json` | output of the completed drift job |
+| `docs/lab6-teardown-output.txt` | written by `scripts/teardown-lab6.sh`; ends `TEARDOWN COMPLETE` |
+| `docs/lab6-mlflow-runs.txt` | the drift run in the `northstar-drift` MLflow experiment |
+
+Run and torn down on 2026-11-22: 718 champion records against the 6,999-row
+baseline, no drift (PSI 0.008 to 0.032, KS p-values 0.61 and 0.89), champion
+p95 5,030 microseconds, all alarms `OK`. The traffic was the validation split
+of the same snapshot, so a clean result is the expected one.
+
 ## Evidence
 
 | File | What it shows |

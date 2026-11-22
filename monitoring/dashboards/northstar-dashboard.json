@@ -1,0 +1,542 @@
+{
+  "start": "-PT12H",
+  "periodOverride": "inherit",
+  "widgets": [
+    {
+      "type": "text",
+      "x": 0,
+      "y": 0,
+      "width": 24,
+      "height": 1,
+      "properties": {
+        "markdown": "## 1. Infrastructure - endpoint instances (`/aws/sagemaker/Endpoints`, published as MLEngineer)"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 1,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "CPU utilization (alert > 80)",
+        "region": "us-east-1",
+        "view": "timeSeries",
+        "stacked": false,
+        "metrics": [
+          [
+            "/aws/sagemaker/Endpoints",
+            "CPUUtilization",
+            "EndpointName",
+            "northstar-churn-prod",
+            "VariantName",
+            "champion"
+          ],
+          [
+            "/aws/sagemaker/Endpoints",
+            "CPUUtilization",
+            "EndpointName",
+            "northstar-churn-prod",
+            "VariantName",
+            "canary"
+          ]
+        ],
+        "stat": "Average",
+        "period": 60,
+        "annotations": {
+          "horizontal": [
+            {
+              "value": 80,
+              "label": "P2 CPU > 80",
+              "color": "#d62728"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 1,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Memory and disk utilization (%)",
+        "region": "us-east-1",
+        "view": "timeSeries",
+        "stacked": false,
+        "metrics": [
+          [
+            "/aws/sagemaker/Endpoints",
+            "MemoryUtilization",
+            "EndpointName",
+            "northstar-churn-prod",
+            "VariantName",
+            "champion"
+          ],
+          [
+            "/aws/sagemaker/Endpoints",
+            "DiskUtilization",
+            "EndpointName",
+            "northstar-churn-prod",
+            "VariantName",
+            "champion"
+          ]
+        ],
+        "stat": "Average",
+        "period": 60
+      }
+    },
+    {
+      "type": "text",
+      "x": 0,
+      "y": 7,
+      "width": 24,
+      "height": 1,
+      "properties": {
+        "markdown": "## 2. Pipeline - Glue jobs (`Glue` task metrics, published as DataEngineer; failures come from the EventBridge rule, because task metrics miss driver failures)"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 8,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Glue tasks completed / failed per job",
+        "region": "us-east-1",
+        "view": "timeSeries",
+        "stacked": false,
+        "metrics": [
+          [
+            "Glue",
+            "glue.driver.aggregate.numCompletedTasks",
+            "JobName",
+            "northstar-dev-transform",
+            "JobRunId",
+            "ALL",
+            "Type",
+            "count"
+          ],
+          [
+            "Glue",
+            "glue.driver.aggregate.numFailedTasks",
+            "JobName",
+            "northstar-dev-transform",
+            "JobRunId",
+            "ALL",
+            "Type",
+            "count"
+          ],
+          [
+            "Glue",
+            "glue.driver.aggregate.numCompletedTasks",
+            "JobName",
+            "northstar-dev-feature-engineer",
+            "JobRunId",
+            "ALL",
+            "Type",
+            "count"
+          ],
+          [
+            "Glue",
+            "glue.driver.aggregate.numFailedTasks",
+            "JobName",
+            "northstar-dev-feature-engineer",
+            "JobRunId",
+            "ALL",
+            "Type",
+            "count"
+          ]
+        ],
+        "stat": "Sum",
+        "period": 300
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 8,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Glue job FAILED / ERROR / TIMEOUT events (alert >= 1)",
+        "region": "us-east-1",
+        "view": "timeSeries",
+        "stacked": false,
+        "metrics": [
+          [
+            "AWS/Events",
+            "TriggeredRules",
+            "RuleName",
+            "northstar-glue-job-failed"
+          ]
+        ],
+        "stat": "Sum",
+        "period": 300,
+        "annotations": {
+          "horizontal": [
+            {
+              "value": 1,
+              "label": "P3 any failure",
+              "color": "#d62728"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "text",
+      "x": 0,
+      "y": 14,
+      "width": 24,
+      "height": 1,
+      "properties": {
+        "markdown": "## 3. Model - data drift, Evidently processing job vs the training baseline (`NorthStar/ChurnModel`, published from `monitoring/publish_metrics.py`)"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 15,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "title": "PSI per feature (drift ABOVE 0.2)",
+        "region": "us-east-1",
+        "view": "timeSeries",
+        "stacked": false,
+        "metrics": [
+          [
+            "NorthStar/ChurnModel",
+            "FeaturePSI",
+            "EndpointName",
+            "northstar-churn-prod",
+            "Feature",
+            "days_since_last_purchase"
+          ],
+          [
+            "NorthStar/ChurnModel",
+            "FeaturePSI",
+            "EndpointName",
+            "northstar-churn-prod",
+            "Feature",
+            "purchase_frequency_30d"
+          ],
+          [
+            "NorthStar/ChurnModel",
+            "FeaturePSI",
+            "EndpointName",
+            "northstar-churn-prod",
+            "Feature",
+            "avg_order_value"
+          ]
+        ],
+        "stat": "Maximum",
+        "period": 300,
+        "annotations": {
+          "horizontal": [
+            {
+              "value": 0.2,
+              "label": "PSI > 0.2 = drift",
+              "color": "#d62728"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 8,
+      "y": 15,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "title": "KS p-value per feature (drift BELOW 0.05)",
+        "region": "us-east-1",
+        "view": "timeSeries",
+        "stacked": false,
+        "metrics": [
+          [
+            "NorthStar/ChurnModel",
+            "FeatureKSPValue",
+            "EndpointName",
+            "northstar-churn-prod",
+            "Feature",
+            "category_diversity_score"
+          ],
+          [
+            "NorthStar/ChurnModel",
+            "FeatureKSPValue",
+            "EndpointName",
+            "northstar-churn-prod",
+            "Feature",
+            "total_spend_90d"
+          ]
+        ],
+        "stat": "Minimum",
+        "period": 300,
+        "annotations": {
+          "horizontal": [
+            {
+              "value": 0.05,
+              "label": "p < 0.05 = drift",
+              "color": "#d62728"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 16,
+      "y": 15,
+      "width": 8,
+      "height": 6,
+      "properties": {
+        "title": "Drift detected (0/1) and violation count",
+        "region": "us-east-1",
+        "view": "timeSeries",
+        "stacked": false,
+        "metrics": [
+          [
+            "NorthStar/ChurnModel",
+            "DriftDetected",
+            "EndpointName",
+            "northstar-churn-prod"
+          ],
+          [
+            "NorthStar/ChurnModel",
+            "DriftViolationCount",
+            "EndpointName",
+            "northstar-churn-prod"
+          ]
+        ],
+        "stat": "Maximum",
+        "period": 300,
+        "annotations": {
+          "horizontal": [
+            {
+              "value": 1,
+              "label": "P3 drift",
+              "color": "#d62728"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "text",
+      "x": 0,
+      "y": 21,
+      "width": 24,
+      "height": 1,
+      "properties": {
+        "markdown": "## 4. Application - inference latency and errors (`AWS/SageMaker`; ModelLatency is in MICROSECONDS)"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 22,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "ModelLatency p50 / p95 / p99, champion (microseconds)",
+        "region": "us-east-1",
+        "view": "timeSeries",
+        "stacked": false,
+        "metrics": [
+          [
+            "AWS/SageMaker",
+            "ModelLatency",
+            "EndpointName",
+            "northstar-churn-prod",
+            "VariantName",
+            "champion",
+            {
+              "stat": "p50",
+              "label": "p50"
+            }
+          ],
+          [
+            "AWS/SageMaker",
+            "ModelLatency",
+            "EndpointName",
+            "northstar-churn-prod",
+            "VariantName",
+            "champion",
+            {
+              "stat": "p95",
+              "label": "p95"
+            }
+          ],
+          [
+            "AWS/SageMaker",
+            "ModelLatency",
+            "EndpointName",
+            "northstar-churn-prod",
+            "VariantName",
+            "champion",
+            {
+              "stat": "p99",
+              "label": "p99"
+            }
+          ]
+        ],
+        "stat": "p95",
+        "period": 60,
+        "annotations": {
+          "horizontal": [
+            {
+              "value": 200000,
+              "label": "P2 p95 > 200 ms (200000 us)",
+              "color": "#ff7f0e"
+            },
+            {
+              "value": 20000,
+              "label": "SLO p95 20 ms (20000 us)",
+              "color": "#2ca02c"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 22,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Invocations and errors per variant",
+        "region": "us-east-1",
+        "view": "timeSeries",
+        "stacked": false,
+        "metrics": [
+          [
+            "AWS/SageMaker",
+            "Invocations",
+            "EndpointName",
+            "northstar-churn-prod",
+            "VariantName",
+            "champion"
+          ],
+          [
+            "AWS/SageMaker",
+            "Invocation5XXErrors",
+            "EndpointName",
+            "northstar-churn-prod",
+            "VariantName",
+            "champion"
+          ],
+          [
+            "AWS/SageMaker",
+            "Invocation4XXErrors",
+            "EndpointName",
+            "northstar-churn-prod",
+            "VariantName",
+            "champion"
+          ],
+          [
+            "AWS/SageMaker",
+            "Invocations",
+            "EndpointName",
+            "northstar-churn-prod",
+            "VariantName",
+            "canary"
+          ],
+          [
+            "AWS/SageMaker",
+            "Invocation5XXErrors",
+            "EndpointName",
+            "northstar-churn-prod",
+            "VariantName",
+            "canary"
+          ],
+          [
+            "AWS/SageMaker",
+            "Invocation4XXErrors",
+            "EndpointName",
+            "northstar-churn-prod",
+            "VariantName",
+            "canary"
+          ]
+        ],
+        "stat": "Sum",
+        "period": 60
+      }
+    },
+    {
+      "type": "text",
+      "x": 0,
+      "y": 28,
+      "width": 24,
+      "height": 1,
+      "properties": {
+        "markdown": "## 5. Business - churn alert volume, the proxy for offers sent (`NorthStar/ChurnModel`)"
+      }
+    },
+    {
+      "type": "metric",
+      "x": 0,
+      "y": 29,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Churn alert volume (predictions >= alert score)",
+        "region": "us-east-1",
+        "view": "timeSeries",
+        "stacked": false,
+        "metrics": [
+          [
+            "NorthStar/ChurnModel",
+            "ChurnAlertVolume",
+            "EndpointName",
+            "northstar-churn-prod"
+          ]
+        ],
+        "stat": "Sum",
+        "period": 3600
+      }
+    },
+    {
+      "type": "metric",
+      "x": 12,
+      "y": 29,
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Volume vs trailing 7-day average (alert < 0.7)",
+        "region": "us-east-1",
+        "view": "timeSeries",
+        "stacked": false,
+        "metrics": [
+          [
+            "NorthStar/ChurnModel",
+            "ChurnAlertVolumeRatio",
+            "EndpointName",
+            "northstar-churn-prod"
+          ]
+        ],
+        "stat": "Minimum",
+        "period": 3600,
+        "annotations": {
+          "horizontal": [
+            {
+              "value": 0.7,
+              "label": "P3 drop > 30%",
+              "color": "#d62728"
+            }
+          ]
+        },
+        "yAxis": {
+          "left": {
+            "min": 0
+          }
+        }
+      }
+    }
+  ]
+}

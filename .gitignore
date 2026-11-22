@@ -33,3 +33,4 @@ data/northstar-raw-sample.csv
 
 # Terraform saved plans (binary, may embed values)
 tfplan
+monitoring/reports/drift_report.html
